@@ -91,5 +91,18 @@
     "overrides": {
       "vite": "6.3.5"
     }
-  }
+  },
+  "description": "This is a code bundle for Redesign Medical Interface. The original project is available at https://www.figma.com/design/yipH8WRcFHFgP0j894RfKT/Redesign-Medical-Interface.",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/quarpone1/v2.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/quarpone1/v2/issues"
+  },
+  "homepage": "https://github.com/quarpone1/v2#readme"
 }
