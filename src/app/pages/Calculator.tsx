@@ -359,8 +359,7 @@ export function Calculator() {
                       <option value="I">I</option>
                       <option value="II">II</option>
                       <option value="III">III</option>
-                      <option value="IVA">IVA</option>
-                      <option value="IVB">IVB</option>
+                      <option value="IV">IV</option>
                     </select>
                   </Field>
                   <Field label="pT">
@@ -370,8 +369,7 @@ export function Calculator() {
                       <option value="T1">T1</option>
                       <option value="T2">T2</option>
                       <option value="T3">T3</option>
-                      <option value="T4a">T4a</option>
-                      <option value="T4b">T4b</option>
+                      <option value="T4">T4</option>
                     </select>
                   </Field>
                 </FormGroup>
