@@ -255,7 +255,7 @@ export function Calculator() {
       weightKg: "78",
       stage: "III",
       pT: "T3",
-      nodesExamined: "18",
+      nodesExamined: "12",
       nodesAffected: p.stage === "III" || p.stage === "IV" ? "3" : "1",
       nras: "не мутирован",
       operation: OPERATION_OPTIONS[3] ?? "",
