@@ -637,6 +637,18 @@ function toneBadge(tone: ReturnType<typeof qualityTone>) {
   }
 }
 
+function makePersistentPatientId() {
+  return String(Math.floor(100000 + Math.random() * 90000000));
+}
+
+function cohortCountByStage(stage: string) {
+  if (stage === "I") return 1813;
+  if (stage === "II") return 1801;
+  if (stage === "III") return 2909;
+  if (stage === "IV") return 1684;
+  return 8000;
+}
+
 export function Calculator() {
   const [form, setForm] = useState<FormState>(() => {
     try {
@@ -644,7 +656,7 @@ export function Calculator() {
       if (!raw) return emptyForm();
       const parsed = JSON.parse(raw) as Partial<FormState> | null;
       const merged = { ...emptyForm(), ...(parsed ?? {}) };
-      merged.patientId = "";
+      merged.patientId = String(merged.patientId || makePersistentPatientId());
       return merged;
     } catch {
       return emptyForm();
@@ -653,6 +665,8 @@ export function Calculator() {
   const [factorHorizon, setFactorHorizon] = useState<Horizon>(1);
   const [factorOutcome, setFactorOutcome] = useState<Outcome>("recurrence");
   const [hasResult, setHasResult] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [needsRecalc, setNeedsRecalc] = useState(false);
   const [showExtraOptions, setShowExtraOptions] = useState<Record<OptionalGroupKey, boolean>>({
     demography: false,
     tumor: false,
@@ -726,7 +740,8 @@ export function Calculator() {
         x: 1,
         patientRec: probsRec.y1,
         patientDeath: probsDeath.y1,
-        median: Math.max(5, probsRec.y1 - 2 + (probsRec.y3 % 5)),
+        medianRec: Math.max(5, probsRec.y1 - 2 + (probsRec.y3 % 5)),
+        medianDeath: Math.max(5, probsDeath.y1 - 2 + (probsDeath.y3 % 5)),
         q1: Math.max(2, probsRec.y1 - 8),
         q3: Math.min(92, probsRec.y1 + 10),
       },
@@ -734,7 +749,8 @@ export function Calculator() {
         x: 3,
         patientRec: probsRec.y3,
         patientDeath: probsDeath.y3,
-        median: Math.max(8, probsRec.y3 - 3 + (probsRec.y5 % 4)),
+        medianRec: Math.max(8, probsRec.y3 - 3 + (probsRec.y5 % 4)),
+        medianDeath: Math.max(8, probsDeath.y3 - 3 + (probsDeath.y5 % 4)),
         q1: Math.max(3, probsRec.y3 - 12),
         q3: Math.min(94, probsRec.y3 + 12),
       },
@@ -742,7 +758,8 @@ export function Calculator() {
         x: 5,
         patientRec: probsRec.y5,
         patientDeath: probsDeath.y5,
-        median: Math.max(10, probsRec.y5 - 4 + (probsRec.y1 % 6)),
+        medianRec: Math.max(10, probsRec.y5 - 4 + (probsRec.y1 % 6)),
+        medianDeath: Math.max(10, probsDeath.y5 - 4 + (probsDeath.y1 % 6)),
         q1: Math.max(4, probsRec.y5 - 14),
         q3: Math.min(96, probsRec.y5 + 14),
       },
@@ -750,17 +767,30 @@ export function Calculator() {
     [probsRec, probsDeath]
   );
 
-  const setField = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }, []);
+  const setField = useCallback(
+    <K extends keyof FormState>(key: K, value: FormState[K]) => {
+      setForm((prev) => {
+        if (prev[key] === value) return prev;
+        if (hasResult) setNeedsRecalc(true);
+        return { ...prev, [key]: value };
+      });
+    },
+    [hasResult]
+  );
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...form, patientId: "" }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
     } catch {
       // ignore
     }
   }, [form]);
+
+  useEffect(() => {
+    if (!form.patientId) {
+      setForm((prev) => ({ ...prev, patientId: makePersistentPatientId() }));
+    }
+  }, [form.patientId]);
 
   // Моделирование должно быть временным: при изменении исходных данных сбрасываем симуляцию.
   useEffect(() => {
@@ -822,6 +852,7 @@ export function Calculator() {
     setEnrichInfo(null);
     setAccuracyWarning(false);
     setSubmitAttempted(false);
+    if (hasResult) setNeedsRecalc(true);
   };
 
   const handleEnrichFromCohort = () => {
@@ -882,26 +913,39 @@ export function Calculator() {
       return next;
     });
     setSubmitAttempted(false);
+    if (hasResult) setNeedsRecalc(true);
   };
 
   const handleClear = () => {
     setHasResult(false);
-    setForm(emptyForm());
+    setForm({ ...emptyForm(), patientId: makePersistentPatientId() });
     setEnrichInfo(null);
     setAccuracyWarning(false);
     setSimulationForm(null);
     setSubmitAttempted(false);
+    setNeedsRecalc(false);
   };
 
-  const handleCalculate = () => {
+  const runCalculate = useCallback(() => {
     setSubmitAttempted(true);
     if (hasMissingRequired || blockingValidationErrors) {
       setHasResult(false);
       return;
     }
-    setHasResult(true);
-    setAccuracyWarning(false);
-    setSimulationForm(null);
+    setIsCalculating(true);
+    window.setTimeout(() => {
+      setHasResult(true);
+      setAccuracyWarning(false);
+      setSimulationForm(null);
+      setIsCalculating(false);
+      setNeedsRecalc(false);
+    }, 320);
+  }, [hasMissingRequired, blockingValidationErrors]);
+
+  const handleCalculate = () => {
+    if (isCalculating) return;
+    if (hasResult && !needsRecalc) return;
+    runCalculate();
   };
 
   const riskCardsRec: { h: Horizon; pct: number }[] = [
@@ -920,12 +964,12 @@ export function Calculator() {
   >("line");
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 px-1 py-4 sm:px-2">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 px-0 py-3 sm:px-1">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="mx-auto flex w-full max-w-6xl flex-col gap-4"
+        className="mx-auto flex w-full max-w-[96rem] flex-col gap-4"
       >
         {/* Верхняя зона ~15% (сворачиваемая) */}
         <section
@@ -1015,9 +1059,11 @@ export function Calculator() {
 
               {!collapsed.form && (
                 <div className="px-5 pb-6 sm:px-7">
-                  <div className="mt-6 space-y-6">
-                    <FormGroup icon={User} title="Демография и идентификация">
-                      <Field label={reqLabel("age", "Возраст, лет")}>
+                  <div className="mt-6 flex flex-col gap-6">
+                    <div className="flex flex-col gap-6 min-[1200px]:flex-row min-[1200px]:items-start">
+                      <div className="flex flex-col gap-6 min-[1200px]:flex-1">
+                      <FormGroup icon={User} title="Демография и идентификация" className="h-fit" cols={1}>
+                      <Field label={reqLabel("age", "Возраст")}>
                         <input
                           className={withRequiredHighlight("age", validationErrors.age ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined)}
                           inputMode="numeric"
@@ -1033,7 +1079,7 @@ export function Calculator() {
                         className="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left"
                         aria-expanded={showExtraOptions.demography}
                       >
-                        <span className="text-sm font-bold text-slate-800">Демография - дополнительные параметры</span>
+                        <span className="text-sm font-bold text-slate-800">Дополнительные параметры</span>
                         <ChevronDown
                           className={cn("size-5 text-slate-500 transition-transform", showExtraOptions.demography ? "rotate-0" : "-rotate-90")}
                           aria-hidden
@@ -1077,7 +1123,81 @@ export function Calculator() {
                       )}
                     </FormGroup>
 
-                    <FormGroup icon={Layers} title="Опухолевая характеристика">
+                      <FormGroup icon={Share2} title="Молекулярно-генетические маркеры" className="h-fit" cols={1}>
+                      <Field label={reqLabel("nras", "NRAS")}>
+                        <select className={withRequiredHighlight("nras")} value={form.nras} onChange={(e) => setField("nras", e.target.value)}>
+                          <option value="">— выберите —</option>
+                          <option value="мутирован">мутирован</option>
+                          <option value="не мутирован">не мутирован</option>
+                        </select>
+                      </Field>
+                      <button
+                        type="button"
+                        onClick={() => toggleOptional("molecular")}
+                        className="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left"
+                        aria-expanded={showExtraOptions.molecular}
+                      >
+                        <span className="text-sm font-bold text-slate-800">Дополнительные параметры</span>
+                        <ChevronDown className={cn("size-5 text-slate-500 transition-transform", showExtraOptions.molecular ? "rotate-0" : "-rotate-90")} aria-hidden />
+                      </button>
+                      {showExtraOptions.molecular && (
+                        <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
+                          <div className="grid gap-4">
+                            <Field label="BRAF">
+                              <select className={inputCls} value={form.braf} onChange={(e) => setField("braf", e.target.value)}>
+                                <option value="">— выберите —</option>
+                                <option value="мутирован">мутирован</option>
+                                <option value="не мутирован">не мутирован</option>
+                              </select>
+                            </Field>
+                            <Field label="KRAS">
+                              <select className={inputCls} value={form.kras} onChange={(e) => setField("kras", e.target.value)}>
+                                <option value="">— выберите —</option>
+                                <option value="мутирован">мутирован</option>
+                                <option value="не мутирован">не мутирован</option>
+                              </select>
+                            </Field>
+                          </div>
+                        </div>
+                      )}
+                    </FormGroup>
+
+                      <FormGroup icon={FlaskConical} title="Онкомаркеры" className="h-fit" cols={1}>
+                      <Field label={reqLabel("cea", `РЭА до лечения, нг/мл (${CE_ANORM_HINT})`)}>
+                        <input
+                          className={withRequiredHighlight("cea", validationErrors.cea ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined)}
+                          inputMode="decimal"
+                          value={form.cea}
+                          onChange={(e) => setField("cea", e.target.value)}
+                          title={validationErrors.cea ?? undefined}
+                          aria-invalid={Boolean(validationErrors.cea)}
+                        />
+                      </Field>
+                    </FormGroup>
+
+                      <FormGroup icon={Users} title="Статус и сопутствующие заболевания" className="h-fit" cols={1}>
+                      <div className="grid gap-4">
+                        <Field label="Сахарный диабет">
+                          <select className={inputCls} value={form.diabetes} onChange={(e) => setField("diabetes", e.target.value)}>
+                            <option value="">— выберите —</option>
+                            <option value="да">да</option>
+                            <option value="нет">нет</option>
+                          </select>
+                        </Field>
+                        <Field label="Другие значимые сопутствующие заболевания">
+                          <input
+                            className={inputCls}
+                            value={form.comorbidities}
+                            onChange={(e) => setField("comorbidities", e.target.value)}
+                            placeholder="Например: ИБС, ХБП, ХОБЛ…"
+                          />
+                        </Field>
+                      </div>
+                    </FormGroup>
+                      </div>
+
+                      <div className="flex flex-col gap-6 min-[1200px]:flex-1">
+                    <FormGroup icon={Layers} title="Опухолевая характеристика" className="h-fit">
                       <Field label={reqLabel("stage", "Стадия заболевания")}>
                         <select className={withRequiredHighlight("stage")} value={form.stage} onChange={(e) => setField("stage", e.target.value)}>
                           <option value="">— выберите —</option>
@@ -1160,14 +1280,14 @@ export function Calculator() {
                       <button
                         type="button"
                         onClick={() => toggleOptional("tumor")}
-                        className="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left"
+                        className="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left min-[1200px]:col-span-2"
                         aria-expanded={showExtraOptions.tumor}
                       >
-                        <span className="text-sm font-bold text-slate-800">Опухоль - дополнительные параметры</span>
+                        <span className="text-sm font-bold text-slate-800">Дополнительные параметры</span>
                         <ChevronDown className={cn("size-5 text-slate-500 transition-transform", showExtraOptions.tumor ? "rotate-0" : "-rotate-90")} aria-hidden />
                       </button>
                       {showExtraOptions.tumor && (
-                        <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
+                        <div className="rounded-2xl border border-slate-100 bg-white/70 p-4 min-[1200px]:col-span-2">
                           <Field label="Периневральная инвазия">
                             <select className={inputCls} value={form.perineuralInvasion} onChange={(e) => setField("perineuralInvasion", e.target.value)}>
                               <option value="">— выберите —</option>
@@ -1179,46 +1299,7 @@ export function Calculator() {
                       )}
                     </FormGroup>
 
-                    <FormGroup icon={Share2} title="Молекулярно-генетические маркеры">
-                      <Field label={reqLabel("nras", "NRAS")}>
-                        <select className={withRequiredHighlight("nras")} value={form.nras} onChange={(e) => setField("nras", e.target.value)}>
-                          <option value="">— выберите —</option>
-                          <option value="мутирован">мутирован</option>
-                          <option value="не мутирован">не мутирован</option>
-                        </select>
-                      </Field>
-                      <button
-                        type="button"
-                        onClick={() => toggleOptional("molecular")}
-                        className="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left"
-                        aria-expanded={showExtraOptions.molecular}
-                      >
-                        <span className="text-sm font-bold text-slate-800">Молекулярные - дополнительные параметры</span>
-                        <ChevronDown className={cn("size-5 text-slate-500 transition-transform", showExtraOptions.molecular ? "rotate-0" : "-rotate-90")} aria-hidden />
-                      </button>
-                      {showExtraOptions.molecular && (
-                        <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
-                          <div className="grid gap-4">
-                            <Field label="BRAF">
-                              <select className={inputCls} value={form.braf} onChange={(e) => setField("braf", e.target.value)}>
-                                <option value="">— выберите —</option>
-                                <option value="мутирован">мутирован</option>
-                                <option value="не мутирован">не мутирован</option>
-                              </select>
-                            </Field>
-                            <Field label="KRAS">
-                              <select className={inputCls} value={form.kras} onChange={(e) => setField("kras", e.target.value)}>
-                                <option value="">— выберите —</option>
-                                <option value="мутирован">мутирован</option>
-                                <option value="не мутирован">не мутирован</option>
-                              </select>
-                            </Field>
-                          </div>
-                        </div>
-                      )}
-                    </FormGroup>
-
-                    <FormGroup icon={Scissors} title="Лечение">
+                    <FormGroup icon={Scissors} title="Лечение" className="h-fit">
                       <Field label={reqLabel("operation", "Название операции")}>
                         <select className={withRequiredHighlight("operation")} value={form.operation} onChange={(e) => setField("operation", e.target.value)}>
                           {OPERATION_OPTIONS.map((o) => (
@@ -1237,7 +1318,7 @@ export function Calculator() {
                           ))}
                         </select>
                       </Field>
-                      <Field label={reqLabel("therapySite", "Место лечения")}>
+                      <Field label={reqLabel("therapySite", "Место терапии")}>
                         <select className={withRequiredHighlight("therapySite")} value={form.therapySite} onChange={(e) => setField("therapySite", e.target.value)}>
                           {SITE_OPTIONS.map((o) => (
                             <option key={o} value={o === "— выберите —" ? "" : o}>
@@ -1249,16 +1330,16 @@ export function Calculator() {
                       <button
                         type="button"
                         onClick={() => toggleOptional("treatment")}
-                        className="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left"
+                        className="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left min-[1200px]:col-span-2"
                         aria-expanded={showExtraOptions.treatment}
                       >
-                        <span className="text-sm font-bold text-slate-800">Лечение - дополнительные параметры</span>
+                        <span className="text-sm font-bold text-slate-800">Дополнительные параметры</span>
                         <ChevronDown className={cn("size-5 text-slate-500 transition-transform", showExtraOptions.treatment ? "rotate-0" : "-rotate-90")} aria-hidden />
                       </button>
                       {showExtraOptions.treatment && (
-                        <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
+                        <div className="rounded-2xl border border-slate-100 bg-white/70 p-4 min-[1200px]:col-span-2">
                           <div className="grid gap-4">
-                            <Field label="Адъювантная терапия">
+                            <Field label="Наличие адъювантной терапии">
                               <select className={inputCls} value={form.adjuvantTherapy} onChange={(e) => setField("adjuvantTherapy", e.target.value)}>
                                 <option value="">— выберите —</option>
                                 <option value="да">да</option>
@@ -1296,21 +1377,8 @@ export function Calculator() {
                       )}
                     </FormGroup>
 
-                    <FormGroup icon={FlaskConical} title="Онкомаркеры">
-                      <Field label={reqLabel("cea", `РЭА до лечения, нг/мл (${CE_ANORM_HINT})`)}>
-                        <input
-                          className={withRequiredHighlight("cea", validationErrors.cea ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined)}
-                          inputMode="decimal"
-                          value={form.cea}
-                          onChange={(e) => setField("cea", e.target.value)}
-                          title={validationErrors.cea ?? undefined}
-                          aria-invalid={Boolean(validationErrors.cea)}
-                        />
-                      </Field>
-                    </FormGroup>
-
-                    <FormGroup icon={TestTube} title="Лабораторные показатели">
-                      <div className="grid gap-4">
+                    <FormGroup icon={TestTube} title="Лабораторные показатели" className="h-fit">
+                      <div className="grid gap-4 min-[1200px]:col-span-2 min-[1200px]:grid-cols-2">
                         <Field label={reqLabel("lymphocytesAbs", "Лимфоциты (абс.), ×10⁹/л")}>
                           <input
                             className={withRequiredHighlight(
@@ -1391,15 +1459,15 @@ export function Calculator() {
                       <button
                         type="button"
                         onClick={() => toggleOptional("labs")}
-                        className="mt-4 inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left"
+                        className="mt-4 inline-flex w-full items-center justify-between self-start rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left min-[1200px]:col-span-2"
                         aria-expanded={showExtraOptions.labs}
                       >
-                        <span className="text-sm font-bold text-slate-800">Лаборатория - дополнительные параметры</span>
+                        <span className="text-sm font-bold text-slate-800">Дополнительные параметры</span>
                         <ChevronDown className={cn("size-5 text-slate-500 transition-transform", showExtraOptions.labs ? "rotate-0" : "-rotate-90")} aria-hidden />
                       </button>
 
                       {showExtraOptions.labs && (
-                        <div className="mt-3 rounded-2xl border border-slate-100 bg-white/70 p-4">
+                        <div className="mt-3 w-full rounded-2xl border border-slate-100 bg-white/70 p-4 min-[1200px]:col-span-2">
                           <p className="text-xs text-slate-500">Прогностически значимые показатели, часто отсутствуют в первичной выгрузке и могут быть дообогащены.</p>
                           <div className="mt-4 grid gap-4">
                             <Field label="Альбумин сыворотки, г/л">
@@ -1456,29 +1524,11 @@ export function Calculator() {
                         </div>
                       )}
                     </FormGroup>
-
-                    <FormGroup icon={Users} title="Статус и сопутствующие заболевания">
-                      <div className="grid gap-4">
-                        <Field label="Сахарный диабет">
-                          <select className={inputCls} value={form.diabetes} onChange={(e) => setField("diabetes", e.target.value)}>
-                            <option value="">— выберите —</option>
-                            <option value="да">да</option>
-                            <option value="нет">нет</option>
-                          </select>
-                        </Field>
-                        <Field label="Другие значимые сопутствующие заболевания">
-                          <input
-                            className={inputCls}
-                            value={form.comorbidities}
-                            onChange={(e) => setField("comorbidities", e.target.value)}
-                            placeholder="Например: ИБС, ХБП, ХОБЛ…"
-                          />
-                        </Field>
                       </div>
-                    </FormGroup>
+                    </div>
 
-                    <FormGroup icon={ShieldCheck} title="Качество данных">
-                      <div className="space-y-3">
+                    <FormGroup icon={ShieldCheck} title="Качество данных" className="h-fit" cols={1}>
+                      <div className="grid gap-3 min-[1200px]:grid-cols-2">
                         {groupCompletion(form).map((g) => (
                           <div key={g.key} className="rounded-xl border border-slate-100 bg-white/70 px-3 py-2">
                             <div className="flex items-center justify-between gap-3">
@@ -1492,7 +1542,7 @@ export function Calculator() {
                             </div>
                           </div>
                         ))}
-                        <div className={cn("rounded-xl border px-3 py-2", qBadge.cls)}>
+                        <div className={cn("rounded-xl border px-3 py-2 min-[1200px]:col-span-2", qBadge.cls)}>
                           <div className="flex items-center justify-between gap-3">
                             <div className="text-xs font-bold uppercase tracking-wide opacity-80">Достаточность</div>
                             <div className="text-xs font-bold tabular-nums opacity-90">{completionPct}%</div>
@@ -1540,10 +1590,18 @@ export function Calculator() {
                     <button
                       type="button"
                       onClick={handleCalculate}
-                      className="inline-flex h-11 min-w-[220px] flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition-colors hover:bg-indigo-700 sm:flex-none"
+                      disabled={isCalculating || (hasResult && !needsRecalc)}
+                      className={cn(
+                        "inline-flex h-11 min-w-[220px] flex-1 items-center justify-center gap-2 rounded-xl px-6 text-sm font-bold text-white transition-colors sm:flex-none",
+                        isCalculating || (hasResult && !needsRecalc)
+                          ? "cursor-not-allowed bg-slate-400 shadow-none"
+                          : needsRecalc
+                            ? "bg-amber-500 shadow-lg shadow-amber-500/30 ring-2 ring-amber-200 hover:bg-amber-600"
+                            : "bg-indigo-600 shadow-lg shadow-indigo-500/30 hover:bg-indigo-700"
+                      )}
                     >
                       <CalculatorIcon className="size-4" aria-hidden />
-                      Рассчитать прогноз
+                      {isCalculating ? "Перерасчёт..." : hasResult && !needsRecalc ? "Прогноз актуален" : "Рассчитать прогноз"}
                     </button>
                   </div>
 
@@ -1598,8 +1656,8 @@ export function Calculator() {
                 <>
                   <div className="px-5 pb-6 sm:px-7 space-y-8">
                     <div className="grid gap-4 lg:grid-cols-2">
-                      <OutcomeBlock title="Прогноз рецидива" tone="blue" traj={trajRec} riskCards={riskCardsRec} />
-                      <OutcomeBlock title="Прогноз летального исхода" tone="red" traj={trajDeath} riskCards={riskCardsDeath} />
+                      <OutcomeBlock title="Прогноз рецидива" tone="blue" traj={trajRec} riskCards={riskCardsRec} isCalculating={isCalculating} />
+                      <OutcomeBlock title="Прогноз летального исхода" tone="red" traj={trajDeath} riskCards={riskCardsDeath} isCalculating={isCalculating} />
                     </div>
 
                     <div>
@@ -1611,7 +1669,7 @@ export function Calculator() {
                           {(
                             [
                               { id: "line", label: "Линейный график", Icon: TrendingUp },
-                              { id: "heat", label: "Теплокарта", Icon: Flame },
+                              { id: "heat", label: "Тепловая карта", Icon: Flame },
                               { id: "radar", label: "Лепестки", Icon: Radar },
                               { id: "bar", label: "Бар-чарт", Icon: BarChart3 },
                               { id: "cohort", label: "Когорта", Icon: Users },
@@ -1637,13 +1695,15 @@ export function Calculator() {
                         </div>
                       </div>
 
-                      <div className="mt-4 rounded-2xl border border-slate-100 bg-white p-4">
+                      <div className="relative mt-4 rounded-2xl border border-slate-100 bg-white p-4">
+                        {isCalculating ? <div className="absolute inset-0 z-10 rounded-2xl bg-white/60 backdrop-blur-[1px] animate-pulse" aria-hidden /> : null}
                         {activeTab === "line" && (
                           <>
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="text-sm font-bold text-slate-800">Пациент / когорта НМИЦ</div>
-                              <div className="text-xs text-slate-500">Горизонты: 1 / 3 / 5 лет</div>
+                              <div className="text-xs text-slate-500">Горизонты: 1 / 3 / 5 лет · когорта по стадии: {cohortCountByStage(form.stage)} пациентов</div>
                             </div>
+                            <div className="mt-1 text-xs text-slate-500">Подпись когорты НМИЦ: Медиана когорты НМИЦ (N=2909), с адаптацией N по стадии текущего пациента.</div>
                             <div className="mt-3 h-64 w-full min-w-0">
                               <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={cohortBands} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
@@ -1671,7 +1731,24 @@ export function Calculator() {
                                       ifOverflow="visible"
                                     />
                                   ))}
-                                  <Line type="monotone" dataKey="median" name="Медиана когорты" stroke="#64748b" strokeWidth={2} strokeDasharray="6 4" dot={{ r: 3 }} />
+                                  <Line
+                                    type="monotone"
+                                    dataKey="medianRec"
+                                    name={`Медиана когорты (рецидив, ${cohortCountByStage(form.stage)} пациентов)`}
+                                    stroke="#2563eb"
+                                    strokeWidth={2}
+                                    strokeDasharray="6 4"
+                                    dot={{ r: 3 }}
+                                  />
+                                  <Line
+                                    type="monotone"
+                                    dataKey="medianDeath"
+                                    name={`Медиана когорты (летальный исход, ${cohortCountByStage(form.stage)} пациентов)`}
+                                    stroke="#dc2626"
+                                    strokeWidth={2}
+                                    strokeDasharray="6 4"
+                                    dot={{ r: 3 }}
+                                  />
                                   <Line type="monotone" dataKey="patientRec" name="Пациент (рецидив)" stroke="#2563eb" strokeWidth={2.5} dot={{ r: 4, fill: "#2563eb" }} />
                                   <Line
                                     type="monotone"
@@ -1687,7 +1764,7 @@ export function Calculator() {
                           </>
                         )}
 
-                        {activeTab === "heat" && <HeatmapPlaceholder form={form} outcome={factorOutcome} />}
+                        {activeTab === "heat" && <HeatmapPlaceholder form={form} outcome={factorOutcome} onOutcomeChange={setFactorOutcome} />}
                         {activeTab === "radar" && <RadarPlaceholder form={form} outcome={factorOutcome} horizon={factorHorizon} />}
                         {activeTab === "bar" && <BarPlaceholder form={form} outcome={factorOutcome} horizon={factorHorizon} />}
                         {activeTab === "cohort" && <CohortComparisonTable form={form} />}
@@ -1700,6 +1777,8 @@ export function Calculator() {
 
                     <div>
                       <h3 className="text-base font-bold text-slate-800">Ключевые факторы риска</h3>
+                      <p className="mt-1 text-xs text-slate-500">Вклад фактора — изменение абсолютной вероятности исхода в процентных пунктах.</p>
+                      <p className="mt-1 text-xs text-slate-500">Легенда: <span className="font-semibold text-red-600">красный</span> повышает риск, <span className="font-semibold text-emerald-600">зелёный</span> снижает, <span className="font-semibold text-slate-500">серый</span> — нулевой вклад.</p>
                       <div className="mt-3 flex flex-wrap items-center gap-2">
                         <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
                           {([1, 3, 5] as const).map((y) => (
@@ -1740,21 +1819,21 @@ export function Calculator() {
                       {(() => {
                         const rows = factorContribsForUI.slice(0, 5);
                         const maxAbs = rows[0]?.contribution ? Math.abs(rows[0].contribution) : 1;
-                        const modifiable = factorContribsForUI.filter((r) => r.modifiable).slice(0, 5);
                         return (
                           <>
                             <ul className="mt-4 space-y-3">
                               {rows.map((row, idx) => {
                                 const w = Math.round((Math.abs(row.contribution) / maxAbs) * 100);
+                                const isZero = Math.abs(row.contribution) < 0.01;
                                 const isPos = row.contribution >= 0;
                                 return (
-                                  <li key={row.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 text-sm">
+                                  <li key={row.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 text-sm animate-in fade-in duration-300">
                                     <span className="w-6 tabular-nums text-slate-400">{idx + 1}.</span>
                                     <div className="min-w-0">
                                       <div className="font-medium text-slate-800">{row.title}</div>
-                                      <div className="mt-1 h-2 w-full max-w-md overflow-hidden rounded-full bg-slate-100">
+                                      <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-slate-100">
                                         <div
-                                          className={cn("h-full rounded-full transition-colors", isPos ? "bg-red-500/80" : "bg-emerald-500/80")}
+                                          className={cn("h-full rounded-full transition-colors", isZero ? "bg-slate-400/70" : isPos ? "bg-red-500/80" : "bg-emerald-500/80")}
                                           style={{ width: `${w}%` }}
                                         />
                                       </div>
@@ -1762,7 +1841,7 @@ export function Calculator() {
                                     <span
                                       className={cn(
                                         "font-mono tabular-nums font-semibold",
-                                        isPos ? "text-red-700" : "text-emerald-700"
+                                        isZero ? "text-slate-600" : isPos ? "text-red-700" : "text-emerald-700"
                                       )}
                                     >
                                       {row.contribution >= 0 ? `+${row.contribution.toFixed(1)}%` : `${row.contribution.toFixed(1)}%`}
@@ -1772,8 +1851,7 @@ export function Calculator() {
                               })}
                             </ul>
                             <p className="mt-4 text-sm text-slate-600">
-                              Модифицируемые факторы:{" "}
-                              {modifiable.length ? modifiable.map((m) => m.title).join(", ") : "—"}
+                              Модифицируемые факторы: РЭА до лечения, Гемоглобин, Альбумин сыворотки.
                             </p>
                           </>
                         );
@@ -2085,8 +2163,9 @@ export function Calculator() {
 
                               {simActive ? (
                                 <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
-                                  Риск после моделирования: {patientRiskAfterSimulation.toFixed(1)}% (изменение {simDelta >= 0 ? "+" : ""}
+                                  Пересчитан риск {factorOutcome === "recurrence" ? "рецидива" : "летального исхода"} для горизонта {factorHorizon} год: {patientRiskAfterSimulation.toFixed(1)}% (изменение {simDelta >= 0 ? "+" : ""}
                                   {simDelta.toFixed(1)} п.п.)
+                                  <div className="mt-1 text-xs font-medium">*Моделирование эффекта, не является реальным прогнозом.</div>
                                 </div>
                               ) : null}
                             </div>
@@ -2147,11 +2226,13 @@ function FormGroup({
   title,
   children,
   className,
+  cols = 2,
 }: {
   icon: ComponentType<{ className?: string }>;
   title: string;
   children: ReactNode;
   className?: string;
+  cols?: 1 | 2;
 }) {
   return (
     <div className={cn("rounded-2xl border border-slate-100 bg-slate-50/40 p-4", className)}>
@@ -2161,16 +2242,16 @@ function FormGroup({
         </div>
         <h3 className="text-sm font-bold text-slate-800">{title}</h3>
       </div>
-      <div className="space-y-3">{children}</div>
+      <div className={cn("grid gap-3", cols === 2 ? "min-[1200px]:grid-cols-2" : null)}>{children}</div>
     </div>
   );
 }
 
 function Field({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
-    <div>
+    <div className="min-w-0">
       <label className={labelCls}>{label}</label>
-      <div className="mt-1.5">{children}</div>
+      <div className="mt-1.5 min-w-0">{children}</div>
     </div>
   );
 }
@@ -2180,17 +2261,19 @@ function OutcomeBlock({
   tone,
   traj,
   riskCards,
+  isCalculating = false,
 }: {
   title: string;
   tone: "blue" | "red";
   traj: { kind: TrajectoryKind; label: string };
   riskCards: { h: Horizon; pct: number }[];
+  isCalculating?: boolean;
 }) {
   const accent = tone === "blue" ? "text-blue-700" : "text-red-700";
   const border = tone === "blue" ? "border-blue-100" : "border-red-100";
   const bg = tone === "blue" ? "bg-blue-50/40" : "bg-red-50/40";
   return (
-    <div className={cn("rounded-2xl border p-4", border, bg)}>
+    <div className={cn("rounded-2xl border p-4 transition-all", border, bg, isCalculating ? "animate-pulse" : "")}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className={cn("text-base font-black", accent)}>{title}</h3>
@@ -2223,7 +2306,15 @@ function OutcomeBlock({
   );
 }
 
-function HeatmapPlaceholder({ form, outcome }: { form: FormState; outcome: Outcome }) {
+function HeatmapPlaceholder({
+  form,
+  outcome,
+  onOutcomeChange,
+}: {
+  form: FormState;
+  outcome: Outcome;
+  onOutcomeChange: (v: Outcome) => void;
+}) {
   const cols: Horizon[] = [1, 3, 5];
 
   const horizonMaps = cols.map((h) => {
@@ -2256,7 +2347,25 @@ function HeatmapPlaceholder({ form, outcome }: { form: FormState; outcome: Outco
     <div>
       <div className="flex items-center justify-between gap-3">
         <div className="text-sm font-bold text-slate-800">Тепловая карта влияния факторов</div>
-        <div className="text-xs text-slate-500">Исход: {outcome === "recurrence" ? "рецидив" : "летальный исход"}</div>
+        <div className={cn("text-xs font-semibold", outcome === "recurrence" ? "text-blue-600" : "text-red-600")}>Исход: {outcome === "recurrence" ? "рецидив" : "летальный исход"}</div>
+      </div>
+      <div className="mt-3 flex justify-end">
+        <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+          <button
+            type="button"
+            onClick={() => onOutcomeChange("recurrence")}
+            className={cn("rounded-lg px-3 py-1.5 text-xs font-semibold", outcome === "recurrence" ? "bg-blue-600 text-white" : "text-slate-500")}
+          >
+            Рецидив
+          </button>
+          <button
+            type="button"
+            onClick={() => onOutcomeChange("death")}
+            className={cn("rounded-lg px-3 py-1.5 text-xs font-semibold", outcome === "death" ? "bg-red-600 text-white" : "text-slate-500")}
+          >
+            Летальный исход
+          </button>
+        </div>
       </div>
       <div className="mt-3 overflow-hidden rounded-xl border border-slate-100">
         <div className="grid grid-cols-[1.25fr_repeat(3,1fr)] bg-slate-50 px-1 py-1 text-xs font-bold text-slate-600">
@@ -2718,24 +2827,59 @@ function CompareOutcomesPlaceholder({ form, horizon }: { form: FormState; horizo
     };
   });
 
+  const diffs = data.map((d) => ({ metric: d.metric, diff: Math.abs(d.recurrence - d.death) * 100 }));
+  const avgDiff = diffs.reduce((acc, d) => acc + d.diff, 0) / Math.max(1, diffs.length);
+  const maxDiff = diffs.reduce((best, cur) => (cur.diff > best.diff ? cur : best), { metric: "—", diff: 0 });
+  const topDiffs = [...diffs].sort((a, b) => b.diff - a.diff).slice(0, 4);
+  const hasDivergenceAccent = avgDiff > 5;
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="text-sm font-bold text-slate-800">Сравнение двух исходов на одном графике</div>
         <div className="text-xs text-slate-500">Горизонт: {horizon} год</div>
       </div>
-      <div className="mt-3 h-72 w-full">
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+        {hasDivergenceAccent ? (
+          <span className="inline-flex items-center rounded-lg border border-amber-300 bg-amber-100 px-2.5 py-1 font-bold text-amber-900">
+            Профили расходятся
+          </span>
+        ) : (
+          <span className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-semibold text-slate-600">
+            Профили близки
+          </span>
+        )}
+        <span className="text-slate-600 font-semibold">Среднее расхождение: {avgDiff.toFixed(1)}%</span>
+        <span className="text-slate-500">Максимальное расхождение: {maxDiff.metric} ({maxDiff.diff.toFixed(1)}%)</span>
+      </div>
+      <div className={cn("mt-3 h-72 w-full rounded-2xl", hasDivergenceAccent ? "ring-2 ring-amber-300/70 bg-amber-50/25" : "")}>
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart data={data} outerRadius="75%">
             <PolarGrid stroke="#e2e8f0" />
             <PolarAngleAxis dataKey="metric" tick={{ fill: "#475569", fontSize: 12, fontWeight: 600 }} />
             <PolarRadiusAxis angle={90} domain={[0, 1]} tickCount={3} tick={{ fill: "#94a3b8", fontSize: 10 }} />
-            <RadarShape name="Рецидив" dataKey="recurrence" stroke="#2563eb" fill="#2563eb" fillOpacity={0.18} />
-            <RadarShape name="Летальный исход" dataKey="death" stroke="#dc2626" fill="#dc2626" fillOpacity={0.16} />
+            <RadarShape name="Рецидив" dataKey="recurrence" stroke="#2563eb" strokeWidth={3} fill="#2563eb" fillOpacity={0.26} />
+            <RadarShape name="Летальный исход" dataKey="death" stroke="#dc2626" strokeWidth={3} fill="#dc2626" fillOpacity={0.22} />
             <Legend />
             <Tooltip formatter={(v: number) => `${Math.round(v * 100)}%`} />
           </RadarChart>
         </ResponsiveContainer>
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {topDiffs.map((row) => {
+          const widthPct = Math.min(100, Math.round((row.diff / Math.max(1, maxDiff.diff)) * 100));
+          return (
+            <div key={row.metric} className="rounded-xl border border-slate-100 bg-white/70 px-3 py-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold text-slate-700">{row.metric}</span>
+                <span className="text-xs font-bold text-amber-700">{row.diff.toFixed(1)}%</span>
+              </div>
+              <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-amber-500/80" style={{ width: `${widthPct}%` }} />
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -2787,6 +2931,8 @@ function ParallelCoordsPlaceholder({ form, horizon }: { form: FormState; horizon
   const typicalPts = typicals.map(toPoints);
 
   const polyline = (pts: Array<{ x: number; y: number }>) => pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const lineTooltip = (id: string, f: FormState) =>
+    `ID: ${id}\nВозраст: ${f.age || "—"}\nСтадия: ${f.stage || "—"}\npN: ${f.pN || "—"}\nЛУ пораж.: ${f.nodesAffected || "—"}`;
 
   return (
     <div>
@@ -2817,11 +2963,15 @@ function ParallelCoordsPlaceholder({ form, horizon }: { form: FormState; horizon
 
           {/* typical lines */}
           {typicalPts.map((pts, idx) => (
-            <polyline key={idx} points={polyline(pts)} fill="none" stroke="rgba(100,116,139,0.45)" strokeWidth={2} />
+            <polyline key={idx} points={polyline(pts)} fill="none" stroke="rgba(100,116,139,0.45)" strokeWidth={2}>
+              <title>{lineTooltip(`R-${idx + 1}`, typicals[idx])}</title>
+            </polyline>
           ))}
 
           {/* patient line */}
-          <polyline points={polyline(patientPts)} fill="none" stroke="#2563eb" strokeWidth={3} />
+          <polyline points={polyline(patientPts)} fill="none" stroke="#2563eb" strokeWidth={3}>
+            <title>{lineTooltip(form.patientId || "пациент", form)}</title>
+          </polyline>
 
           {/* patient risk mark */}
           <text x={padLeft} y={padTop - 6} fontSize={11} fill="#2563eb" fontWeight={900}>
@@ -2887,7 +3037,7 @@ function CohortComparisonTable({ form }: { form: FormState }) {
     { key: "kras", label: "KRAS" },
     { key: "operation", label: "Операция" },
     { key: "surgicalAccess", label: "Доступ" },
-    { key: "adjuvantTherapy", label: "Адъювантная терапия" },
+    { key: "adjuvantTherapy", label: "Наличие адъювантной терапии" },
     { key: "adjuvantScheme", label: "Схема" },
     { key: "adjuvantCourses", label: "Курсы" },
     { key: "radiotherapy", label: "Лучевая терапия" },

@@ -58,7 +58,7 @@ export function Dashboard() {
       <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-indigo-800">
-            Прогнозирование риска рецидива
+            Прогнозирование риска летального исхода
           </h1>
           <p className="text-slate-500 mt-2 font-medium">
             Обзор возможностей Онко Ассистент — для кого система и чем она полезна.
@@ -259,7 +259,9 @@ export function Dashboard() {
               {patientsData.slice(0, 4).map((patient) => (
                 <div key={patient.id} className="p-4 sm:px-8 flex items-center justify-between hover:bg-slate-50/50 transition-colors cursor-pointer">
                   <div className="flex items-center gap-4">
-                    <img src={patient.image} alt={patient.name} className="w-12 h-12 rounded-full object-cover shadow-sm border border-white" />
+                    <div className="w-12 h-12 rounded-full bg-slate-100 border border-white shadow-sm flex items-center justify-center text-slate-500">
+                      <UserRound className="size-6" aria-hidden />
+                    </div>
                     <div>
                       <div className="font-semibold text-slate-800">{patient.name}</div>
                       <div className="text-sm text-slate-500 flex gap-2">
@@ -313,7 +315,7 @@ export function Dashboard() {
 
               <div className="bg-white/10 border border-white/20 p-4 rounded-2xl backdrop-blur-md">
                 <p className="text-sm text-indigo-50/90 leading-relaxed">
-                  Система ИИ обновлена. Точность предсказания для плоскоклеточного рака увеличена на 2.4%.
+                  Система ИИ обновлена. Точность предсказания для колоректального рака увеличена на 2.4%.
                 </p>
               </div>
             </div>

@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   RefreshCw,
   Database,
+  UserRound,
 } from "lucide-react";
 import {
   AreaChart,
@@ -79,11 +80,9 @@ export function PatientProfile() {
     >
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
         <div className="flex items-center gap-4 min-w-0">
-          <img
-            src={patient.image}
-            alt={patient.name}
-            className="w-16 h-16 rounded-2xl object-cover shadow-md border-2 border-white shrink-0"
-          />
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 border-2 border-white shadow-md shrink-0 flex items-center justify-center text-slate-500">
+            <UserRound className="size-8" aria-hidden />
+          </div>
           <div className="min-w-0">
             <h1 className="text-2xl font-bold text-slate-800 truncate">{patient.name}</h1>
             <p className="text-slate-500 font-medium flex flex-wrap items-center gap-x-2 gap-y-1 text-sm sm:text-base">

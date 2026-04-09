@@ -57,8 +57,8 @@ export function Settings() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Имя и Фамилия</label>
-                  <input type="text" defaultValue="Д-р Смирнов И.А." className="w-full h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all text-sm" />
+                  <label className="text-sm font-semibold text-slate-700">ФИО врача</label>
+                  <input type="text" defaultValue="Смирнов Владимир Дмитриевич" className="w-full h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all text-sm" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">Специализация</label>

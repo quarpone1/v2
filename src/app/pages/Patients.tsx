@@ -2,7 +2,7 @@ import { motion } from "motion/react";
 import { Link } from "react-router";
 import { patientsData } from "../../data/mock";
 import { Card } from "../components/Card";
-import { Search, Filter, Eye } from "lucide-react";
+import { Search, Filter, Eye, UserRound } from "lucide-react";
 
 export function Patients() {
   return (
@@ -14,9 +14,7 @@ export function Patients() {
     >
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-indigo-800">
-            База Пациентов
-          </h1>
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-indigo-800">Исторические данные</h1>
           <p className="text-slate-500 mt-2 font-medium">Мониторинг всех пациентов с онкологическими заболеваниями</p>
         </div>
       </div>
@@ -27,7 +25,7 @@ export function Patients() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               type="text" 
-              placeholder="Поиск по ФИО, ID..." 
+              placeholder="Поиск по ID..." 
               className="w-full h-11 pl-10 pr-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all"
             />
           </div>
@@ -63,7 +61,9 @@ export function Patients() {
                 >
                   <td className="py-4 pl-4">
                     <div className="flex items-center gap-3">
-                      <img src={patient.image} alt="" className="w-10 h-10 rounded-full object-cover" />
+                      <div className="w-10 h-10 rounded-full bg-slate-100 border border-white shadow-sm flex items-center justify-center text-slate-500">
+                        <UserRound className="size-5" aria-hidden />
+                      </div>
                       <div>
                         <div className="font-semibold text-slate-800">{patient.name}</div>
                         <div className="text-xs text-slate-500">{patient.age} лет • {patient.gender}</div>

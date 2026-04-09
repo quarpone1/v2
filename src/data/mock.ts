@@ -1,81 +1,75 @@
 export const patientsData = [
   {
-    id: "PT-001",
-    name: "Иванов Иван Иванович",
+    id: "P-10001",
+    name: "P-10001",
     age: 58,
     gender: "Мужской",
-    diagnosis: "Аденокарцинома",
+    diagnosis: "Колоректальный рак",
     stage: "II",
     riskScore: 24,
     riskLevel: "Низкий",
     lastVisit: "2026-03-20",
-    status: "Ремиссия",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+    status: "Ремиссия"
   },
   {
-    id: "PT-002",
-    name: "Смирнова Анна Сергеевна",
+    id: "P-10002",
+    name: "P-10002",
     age: 64,
     gender: "Женский",
-    diagnosis: "Плоскоклеточный рак",
+    diagnosis: "Колоректальный рак",
     stage: "III",
     riskScore: 68,
     riskLevel: "Высокий",
     lastVisit: "2026-03-22",
-    status: "Лечение",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+    status: "Лечение"
   },
   {
-    id: "PT-003",
-    name: "Петров Сергей Николаевич",
+    id: "P-10003",
+    name: "P-10003",
     age: 45,
     gender: "Мужской",
-    diagnosis: "Саркома",
+    diagnosis: "Колоректальный рак",
     stage: "I",
     riskScore: 12,
     riskLevel: "Низкий",
     lastVisit: "2026-03-25",
-    status: "Наблюдение",
-    image: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+    status: "Наблюдение"
   },
   {
-    id: "PT-004",
-    name: "Кузнецова Мария Владимировна",
+    id: "P-10004",
+    name: "P-10004",
     age: 72,
     gender: "Женский",
-    diagnosis: "Меланома",
+    diagnosis: "Колоректальный рак",
     stage: "II",
     riskScore: 45,
     riskLevel: "Средний",
     lastVisit: "2026-03-18",
-    status: "Лечение",
-    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+    status: "Лечение"
   },
   {
-    id: "PT-005",
-    name: "Волков Дмитрий Андреевич",
+    id: "P-10005",
+    name: "P-10005",
     age: 52,
     gender: "Мужской",
-    diagnosis: "Аденокарцинома",
+    diagnosis: "Колоректальный рак",
     stage: "IV",
     riskScore: 89,
     riskLevel: "Высокий",
     lastVisit: "2026-03-27",
-    status: "Паллиатив",
-    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+    status: "Паллиатив"
   },
   {
-    id: "PT-006",
-    name: "Лебедева Елена Павловна",
+    id: "P-10006",
+    name: "P-10006",
     age: 39,
     gender: "Женский",
-    diagnosis: "Карцинома",
+    diagnosis: "Колоректальный рак",
     stage: "I",
     riskScore: 8,
     riskLevel: "Низкий",
     lastVisit: "2026-03-10",
-    status: "Ремиссия",
-    image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+    status: "Ремиссия"
   },
 ];
 

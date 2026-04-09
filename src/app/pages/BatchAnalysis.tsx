@@ -66,7 +66,7 @@ function makeBatchResults(ids: string[]): BatchRow[] {
 /** Демо-шаблон CSV для пакетной загрузки */
 function buildCsvTemplate(): string {
   const header =
-    "patient_id;age;gender;stage;cea_ng_ml;albumin_g_l\nPT-001;58;М;II;12,4;42\nPT-002;64;Ж;III;38,1;36";
+    "patient_id;age;gender;stage;cea_ng_ml;albumin_g_l\nP-10001;58;М;II;12,4;42\nP-10002;64;Ж;III;38,1;36";
   return header;
 }
 

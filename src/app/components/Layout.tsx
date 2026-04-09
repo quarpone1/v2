@@ -194,6 +194,25 @@ export function Layout() {
           )}
         </div>
 
+        <div
+          className="relative mb-4 flex items-center gap-3 px-2 py-3 bg-white/40 border border-white/50 rounded-2xl backdrop-blur-md shrink-0"
+          onMouseEnter={(e) => {
+            updateDoctorTooltipPosition(e.clientX, e.clientY);
+            setIsDoctorTooltipVisible(true);
+          }}
+          onMouseMove={(e) => updateDoctorTooltipPosition(e.clientX, e.clientY)}
+          onMouseLeave={() => setIsDoctorTooltipVisible(false)}
+        >
+          <img
+            src="https://images.unsplash.com/photo-1612349317150-e410f624c427?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+            alt=""
+            className="w-10 h-10 rounded-full border-2 border-white object-cover shadow-sm shrink-0"
+          />
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-medium text-slate-900 leading-snug whitespace-normal break-words">Смирнов В.Д., врач-онколог</span>
+          </div>
+        </div>
+
         <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-2 mb-2 shrink-0">
           Навигация
         </p>
@@ -247,21 +266,6 @@ export function Layout() {
         </nav>
 
         <div className="mt-4 pt-4 border-t border-white/50 shrink-0 space-y-3">
-          <div className="rounded-2xl border border-white/60 bg-white/50 px-3 py-3 backdrop-blur-md">
-            <div className="flex items-center gap-3">
-              <img
-                src={blohinLogo}
-                alt="НМИЦ онкологии им. Н.Н. Блохина"
-                className="h-8 w-auto shrink-0"
-                loading="lazy"
-              />
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold leading-snug text-slate-700">
-                  Клиническая база: ФГБУ &quot;НМИЦ онкологии им. Н.Н. Блохина&quot; Минздрава России
-                </p>
-              </div>
-            </div>
-          </div>
           <p className="text-center text-[11px] text-slate-400 font-medium">Версия 1.0.2</p>
           <NavLink
             to="/settings"
@@ -277,39 +281,38 @@ export function Layout() {
           </NavLink>
 
           <div
-            className="relative flex items-center gap-3 px-2 py-3 bg-white/40 border border-white/50 rounded-2xl backdrop-blur-md"
-            onMouseEnter={(e) => {
-              updateDoctorTooltipPosition(e.clientX, e.clientY);
-              setIsDoctorTooltipVisible(true);
-            }}
-            onMouseMove={(e) => updateDoctorTooltipPosition(e.clientX, e.clientY)}
-            onMouseLeave={() => setIsDoctorTooltipVisible(false)}
-          >
-            <img
-              src="https://images.unsplash.com/photo-1612349317150-e410f624c427?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-              alt=""
-              className="w-10 h-10 rounded-full border-2 border-white object-cover shadow-sm shrink-0"
-            />
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-medium text-slate-900 leading-none truncate">Смирнов Владимир Дмитриевич, врач-онколог</span>
-            </div>
-          </div>
-          <div
             ref={doctorTooltipRef}
             className={cn(
               "pointer-events-none fixed z-[100] w-max max-w-[260px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-lg transition-opacity",
               isDoctorTooltipVisible ? "opacity-100" : "opacity-0"
             )}
           >
-            Смирнов Владимир Дмитриевич
+            Смирнов В.Д.
             <br />
             Врач-онколог
+          </div>
+        </div>
+        <div className="mt-auto pt-4 shrink-0">
+          <div className="rounded-2xl border border-white/60 bg-white/50 px-3 py-3 backdrop-blur-md">
+            <div className="flex items-start gap-3">
+              <img
+                src={blohinLogo}
+                alt="НМИЦ онкологии им. Н.Н. Блохина"
+                className="h-8 w-auto shrink-0"
+                loading="lazy"
+              />
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold leading-snug text-slate-700">
+                  Клиническая база: ФГБУ &quot;НМИЦ онкологии им. Н.Н. Блохина&quot; Минздрава России
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </aside>
 
       <div className="flex-1 flex flex-col h-full min-w-0 z-10 relative">
-        <header className="h-[80px] px-4 sm:px-8 flex items-center justify-between gap-4 z-20 border-b border-white/20 bg-white/10 backdrop-blur-md shrink-0">
+        <header className="h-[80px] px-3 sm:px-5 lg:px-6 flex items-center justify-between gap-4 z-20 border-b border-white/20 bg-white/10 backdrop-blur-md shrink-0">
           <div className="flex-1 max-w-md min-w-0 relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} aria-hidden />
             <label htmlFor="global-search" className="sr-only">
@@ -342,7 +345,7 @@ export function Layout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8 relative min-h-0">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 lg:p-5 relative min-h-0">
           <Outlet />
         </main>
       </div>
