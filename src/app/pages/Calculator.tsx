@@ -51,7 +51,7 @@ type Horizon = 1 | 3 | 5;
 type Outcome = "recurrence" | "death";
 
 const STORAGE_KEY = "blohin_calc_v2";
-const REQUIRED_MIN_FIELDS = 18;
+const REQUIRED_MIN_FIELDS = 20;
 
 function normalizePatientId(input: string | null | undefined) {
   const digits = String(input ?? "").replace(/\D/g, "");
@@ -157,7 +157,7 @@ const COHORT_REFERENCE_FORM: FormState = {
   pN: "N0",
   pM: "M0",
   gradeG: "G2",
-  lymphovascularInvasion: "нет",
+  lymphovascularInvasion: "L0",
   perineuralInvasion: "нет",
   nodesExamined: "14",
   nodesAffected: "0",
@@ -223,7 +223,7 @@ function pMToNum(pM: string): number {
 }
 
 function invasionToNum(v: string): number {
-  return v === "есть" ? 1 : 0;
+  return v === "L1" || v === "есть" ? 1 : 0;
 }
 
 function bmiFromFormForModel(form: FormState): number {
@@ -306,18 +306,20 @@ function computeScaledFactorContribs(
 }
 
 const REQUIRED_KEYS: (keyof FormState)[] = [
-  "sex",
   "age",
-  "heightCm",
-  "weightKg",
   "stage",
   "pT",
   "pN",
   "pM",
   "gradeG",
   "lymphovascularInvasion",
-  "perineuralInvasion",
   "nodesExamined",
+  "nodesAffected",
+  "nras",
+  "cea",
+  "operation",
+  "surgicalAccess",
+  "therapySite",
   "lymphocytesAbs",
   "leukocytes",
   "hemoglobin",
@@ -542,6 +544,7 @@ const inputCls =
 const labelCls = "text-xs font-semibold text-slate-600";
 
 type CollapsibleKey = "top" | "form" | "results";
+type OptionalGroupKey = "demography" | "tumor" | "molecular" | "treatment" | "labs";
 
 function completionStats(form: FormState) {
   const coreKeys: (keyof FormState)[] = [
@@ -650,10 +653,17 @@ export function Calculator() {
   const [factorHorizon, setFactorHorizon] = useState<Horizon>(1);
   const [factorOutcome, setFactorOutcome] = useState<Outcome>("recurrence");
   const [hasResult, setHasResult] = useState(false);
-  const [showExtraLabs, setShowExtraLabs] = useState(false);
+  const [showExtraOptions, setShowExtraOptions] = useState<Record<OptionalGroupKey, boolean>>({
+    demography: false,
+    tumor: false,
+    molecular: false,
+    treatment: false,
+    labs: false,
+  });
   const [enrichInfo, setEnrichInfo] = useState<{ filled: number } | null>(null);
   const [accuracyWarning, setAccuracyWarning] = useState(false);
   const [simulationForm, setSimulationForm] = useState<FormState | null>(null);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<CollapsibleKey, boolean>>({
     top: false,
     form: false,
@@ -676,6 +686,11 @@ export function Calculator() {
 
   const { filledCore, totalCore, pct: completionPct } = useMemo(() => completionStats(form), [form]);
   const { filled: filledRequired, total: totalRequired } = useMemo(() => requiredCompletionStats(form), [form]);
+  const missingRequiredKeys = useMemo(
+    () => new Set<keyof FormState>(REQUIRED_KEYS.filter((k) => !String(form[k] ?? "").trim())),
+    [form]
+  );
+  const hasMissingRequired = missingRequiredKeys.size > 0;
   const validationErrors = useMemo(() => validateForm(form), [form]);
   const blockingValidationErrors = REQUIRED_NUMERIC_KEYS.some((k) => Boolean(validationErrors[k]));
   const qTone = useMemo(() => qualityTone(filledCore), [filledCore]);
@@ -687,7 +702,7 @@ export function Calculator() {
     () => getRiskAt(effectiveFormForRecommendations, factorOutcome, factorHorizon),
     [effectiveFormForRecommendations, factorOutcome, factorHorizon]
   );
-  const requiredStarHint = "Обязательное поле для расчёта прогноза (минимум 18 из 30).";
+  const requiredStarHint = `Обязательное поле для расчёта прогноза (${REQUIRED_MIN_FIELDS} из ${REQUIRED_KEYS.length}).`;
   const reqLabel = (key: keyof FormState, text: string) => (
     <>
       {text}
@@ -698,6 +713,12 @@ export function Calculator() {
       ) : null}
     </>
   );
+  const withRequiredHighlight = (key: keyof FormState, extraClass?: string) =>
+    cn(
+      inputCls,
+      submitAttempted && missingRequiredKeys.has(key) ? "border-red-500 bg-red-50/40 focus:ring-red-500/30" : null,
+      extraClass ?? null
+    );
 
   const cohortBands = useMemo(
     () => [
@@ -750,6 +771,9 @@ export function Calculator() {
   const toggleCollapsed = (key: CollapsibleKey) => {
     setCollapsed((p) => ({ ...p, [key]: !p[key] }));
   };
+  const toggleOptional = (key: OptionalGroupKey) => {
+    setShowExtraOptions((p) => ({ ...p, [key]: !p[key] }));
+  };
 
   const handleLoad = () => {
     const p = patientsData[0];
@@ -766,7 +790,7 @@ export function Calculator() {
       pN: "N1",
       pM: "M0",
       gradeG: "G2",
-      lymphovascularInvasion: "",
+      lymphovascularInvasion: "L0",
       perineuralInvasion: "",
       nodesExamined: "12",
       nodesAffected: p.stage === "III" || p.stage === "IV" ? "3" : "1",
@@ -797,6 +821,7 @@ export function Calculator() {
     });
     setEnrichInfo(null);
     setAccuracyWarning(false);
+    setSubmitAttempted(false);
   };
 
   const handleEnrichFromCohort = () => {
@@ -810,7 +835,7 @@ export function Calculator() {
       pN: "N0",
       pM: "M0",
       gradeG: "G2",
-      lymphovascularInvasion: "нет",
+      lymphovascularInvasion: "L0",
       perineuralInvasion: "нет",
       nodesExamined: "14",
       nodesAffected: "0",
@@ -823,6 +848,7 @@ export function Calculator() {
       adjuvantScheme: "XELOX",
       adjuvantCourses: "6",
       radiotherapy: "нет",
+      therapySite: SITE_OPTIONS[1] ?? "",
       cea: "3.1",
       lymphocytesAbs: "1.6",
       leukocytes: "6.1",
@@ -855,6 +881,7 @@ export function Calculator() {
       setEnrichInfo(delta > 0 ? { filled: delta } : null);
       return next;
     });
+    setSubmitAttempted(false);
   };
 
   const handleClear = () => {
@@ -863,9 +890,15 @@ export function Calculator() {
     setEnrichInfo(null);
     setAccuracyWarning(false);
     setSimulationForm(null);
+    setSubmitAttempted(false);
   };
 
   const handleCalculate = () => {
+    setSubmitAttempted(true);
+    if (hasMissingRequired || blockingValidationErrors) {
+      setHasResult(false);
+      return;
+    }
     setHasResult(true);
     setAccuracyWarning(false);
     setSimulationForm(null);
@@ -896,7 +929,7 @@ export function Calculator() {
       >
         {/* Верхняя зона ~15% (сворачиваемая) */}
         <section
-          className="flex flex-shrink-0 flex-col rounded-[28px] border border-white/70 bg-white/55 shadow-sm backdrop-blur-md"
+          className="flex w-full flex-shrink-0 flex-col rounded-[28px] border border-white/70 bg-white/55 shadow-sm backdrop-blur-md"
           aria-labelledby="blohin-prognosis-title"
         >
           <button
@@ -951,7 +984,7 @@ export function Calculator() {
                   </div>
                   <div className="mt-1 text-base font-bold">{qBadge.label}</div>
                   <p className="mt-1 text-xs opacity-80">
-                    Минимум для расчёта: {REQUIRED_MIN_FIELDS} полей (обязательные, настройка с НМИЦ). Сейчас:{" "}
+                    Для расчёта должны быть заполнены все обязательные поля. Сейчас:{" "}
                     <span className="font-semibold tabular-nums">{filledRequired}</span> из{" "}
                     <span className="font-semibold tabular-nums">{totalRequired}</span>.
                   </p>
@@ -961,10 +994,10 @@ export function Calculator() {
           )}
         </section>
 
-        <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-4 lg:grid-rows-none">
+        <div className="grid w-full min-h-0 flex-1 grid-rows-[minmax(0,1fr)] gap-4 lg:grid-rows-none">
           {/* Центральная зона ~50% — форма */}
           <section
-            className={cn("flex-shrink-0", collapsed.form ? "min-h-0" : "min-h-[42vh] lg:min-h-[48vh]")}
+            className={cn("w-full flex-shrink-0", collapsed.form ? "min-h-0" : "min-h-[42vh] lg:min-h-[48vh]")}
             aria-label="Форма ввода параметров"
           >
             <Card className="flex h-full flex-col overflow-hidden p-0">
@@ -982,18 +1015,11 @@ export function Calculator() {
 
               {!collapsed.form && (
                 <div className="px-5 pb-6 sm:px-7">
-                  <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="mt-6 space-y-6">
                     <FormGroup icon={User} title="Демография и идентификация">
-                      <Field label={reqLabel("sex", "Пол")}>
-                        <select className={inputCls} value={form.sex} onChange={(e) => setField("sex", e.target.value)}>
-                          <option value="">— выберите —</option>
-                          <option value="жен">жен</option>
-                          <option value="муж">муж</option>
-                        </select>
-                      </Field>
                       <Field label={reqLabel("age", "Возраст, лет")}>
                         <input
-                          className={cn(inputCls, validationErrors.age ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                          className={withRequiredHighlight("age", validationErrors.age ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined)}
                           inputMode="numeric"
                           value={form.age}
                           onChange={(e) => setField("age", e.target.value)}
@@ -1001,44 +1027,69 @@ export function Calculator() {
                           aria-invalid={Boolean(validationErrors.age)}
                         />
                       </Field>
-                      <Field label={reqLabel("heightCm", "Рост, см")}>
-                        <input
-                          className={cn(inputCls, validationErrors.heightCm ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
-                          inputMode="decimal"
-                          value={form.heightCm}
-                          onChange={(e) => setField("heightCm", e.target.value)}
-                          title={validationErrors.heightCm ?? undefined}
-                          aria-invalid={Boolean(validationErrors.heightCm)}
+                      <button
+                        type="button"
+                        onClick={() => toggleOptional("demography")}
+                        className="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left"
+                        aria-expanded={showExtraOptions.demography}
+                      >
+                        <span className="text-sm font-bold text-slate-800">Демография - дополнительные параметры</span>
+                        <ChevronDown
+                          className={cn("size-5 text-slate-500 transition-transform", showExtraOptions.demography ? "rotate-0" : "-rotate-90")}
+                          aria-hidden
                         />
-                      </Field>
-                      <Field label={reqLabel("weightKg", "Вес, кг")}>
-                        <input
-                          className={cn(inputCls, validationErrors.weightKg ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
-                          inputMode="decimal"
-                          value={form.weightKg}
-                          onChange={(e) => setField("weightKg", e.target.value)}
-                          title={validationErrors.weightKg ?? undefined}
-                          aria-invalid={Boolean(validationErrors.weightKg)}
-                        />
-                      </Field>
-                      <Field label="ИМТ, кг/м²">
-                        <input className={cn(inputCls, "bg-slate-100/70")} readOnly value={bmi != null ? String(bmi) : "—"} />
-                      </Field>
+                      </button>
+                      {showExtraOptions.demography && (
+                        <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
+                          <div className="grid gap-4">
+                            <Field label="Пол">
+                              <select className={inputCls} value={form.sex} onChange={(e) => setField("sex", e.target.value)}>
+                                <option value="">— выберите —</option>
+                                <option value="жен">жен</option>
+                                <option value="муж">муж</option>
+                              </select>
+                            </Field>
+                            <Field label="Рост, см">
+                              <input
+                                className={cn(inputCls, validationErrors.heightCm ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                                inputMode="decimal"
+                                value={form.heightCm}
+                                onChange={(e) => setField("heightCm", e.target.value)}
+                                title={validationErrors.heightCm ?? undefined}
+                                aria-invalid={Boolean(validationErrors.heightCm)}
+                              />
+                            </Field>
+                            <Field label="Вес, кг">
+                              <input
+                                className={cn(inputCls, validationErrors.weightKg ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                                inputMode="decimal"
+                                value={form.weightKg}
+                                onChange={(e) => setField("weightKg", e.target.value)}
+                                title={validationErrors.weightKg ?? undefined}
+                                aria-invalid={Boolean(validationErrors.weightKg)}
+                              />
+                            </Field>
+                            <Field label="ИМТ, кг/м²">
+                              <input className={cn(inputCls, "bg-slate-100/70")} readOnly value={bmi != null ? String(bmi) : "—"} />
+                            </Field>
+                          </div>
+                        </div>
+                      )}
                     </FormGroup>
 
                     <FormGroup icon={Layers} title="Опухолевая характеристика">
-                      <Field label={reqLabel("stage", "Стадия заболевания (0–IV)")}>
-                        <select className={inputCls} value={form.stage} onChange={(e) => setField("stage", e.target.value)}>
+                      <Field label={reqLabel("stage", "Стадия заболевания")}>
+                        <select className={withRequiredHighlight("stage")} value={form.stage} onChange={(e) => setField("stage", e.target.value)}>
                           <option value="">— выберите —</option>
-                          <option value="0">0</option>
-                          <option value="I">I</option>
-                          <option value="II">II</option>
-                          <option value="III">III</option>
-                          <option value="IV">IV</option>
+                          <option value="0">0 стадия: Карцинома</option>
+                          <option value="I">I стадия: Локализованная опухоль, обычно небольшого размера</option>
+                          <option value="II">II стадия: Местно-распространенная опухоль, без метастазов в лимфоузлы</option>
+                          <option value="III">III стадия: Наличие метастазов в регионарные лимфатические узлы</option>
+                          <option value="IV">IV стадия: Наличие отдаленных метастазов (M1)</option>
                         </select>
                       </Field>
                       <Field label={reqLabel("pT", "pT")}>
-                        <select className={inputCls} value={form.pT} onChange={(e) => setField("pT", e.target.value)}>
+                        <select className={withRequiredHighlight("pT")} value={form.pT} onChange={(e) => setField("pT", e.target.value)}>
                           <option value="">— выберите —</option>
                           <option value="Tis">Tis</option>
                           <option value="T1">T1</option>
@@ -1048,7 +1099,7 @@ export function Calculator() {
                         </select>
                       </Field>
                       <Field label={reqLabel("pN", "pN")}>
-                        <select className={inputCls} value={form.pN} onChange={(e) => setField("pN", e.target.value)}>
+                        <select className={withRequiredHighlight("pN")} value={form.pN} onChange={(e) => setField("pN", e.target.value)}>
                           <option value="">— выберите —</option>
                           <option value="N0">N0</option>
                           <option value="N1">N1</option>
@@ -1056,38 +1107,36 @@ export function Calculator() {
                         </select>
                       </Field>
                       <Field label={reqLabel("pM", "pM")}>
-                        <select className={inputCls} value={form.pM} onChange={(e) => setField("pM", e.target.value)}>
+                        <select className={withRequiredHighlight("pM")} value={form.pM} onChange={(e) => setField("pM", e.target.value)}>
                           <option value="">— выберите —</option>
                           <option value="M0">M0</option>
                           <option value="M1">M1</option>
                         </select>
                       </Field>
                       <Field label={reqLabel("gradeG", "Степень дифференцировки (G)")}>
-                        <select className={inputCls} value={form.gradeG} onChange={(e) => setField("gradeG", e.target.value)}>
+                        <select className={withRequiredHighlight("gradeG")} value={form.gradeG} onChange={(e) => setField("gradeG", e.target.value)}>
                           <option value="">— выберите —</option>
-                          <option value="G1">G1</option>
-                          <option value="G2">G2</option>
-                          <option value="G3">G3</option>
-                          <option value="G4">G4</option>
+                          <option value="GX">GX (не может быть определена)</option>
+                          <option value="G1">G1 (высокая)</option>
+                          <option value="G2">G2 (умеренная)</option>
+                          <option value="G3">G3 (низкая)</option>
+                          <option value="G4">G4 (недифференцированная)</option>
                         </select>
                       </Field>
                       <Field label={reqLabel("lymphovascularInvasion", "Лимфоваскулярная инвазия")}>
-                        <select className={inputCls} value={form.lymphovascularInvasion} onChange={(e) => setField("lymphovascularInvasion", e.target.value)}>
+                        <select className={withRequiredHighlight("lymphovascularInvasion")} value={form.lymphovascularInvasion} onChange={(e) => setField("lymphovascularInvasion", e.target.value)}>
                           <option value="">— выберите —</option>
-                          <option value="есть">есть</option>
-                          <option value="нет">нет</option>
-                        </select>
-                      </Field>
-                      <Field label={reqLabel("perineuralInvasion", "Периневральная инвазия")}>
-                        <select className={inputCls} value={form.perineuralInvasion} onChange={(e) => setField("perineuralInvasion", e.target.value)}>
-                          <option value="">— выберите —</option>
-                          <option value="есть">есть</option>
-                          <option value="нет">нет</option>
+                          <option value="L0">L0 (отсутствует)</option>
+                          <option value="L1">L1 (присутствует)</option>
+                          <option value="LX">LX (невозможно оценить)</option>
                         </select>
                       </Field>
                       <Field label={reqLabel("nodesExamined", "Изучено лимфоузлов")}>
                         <input
-                          className={cn(inputCls, validationErrors.nodesExamined ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                          className={withRequiredHighlight(
+                            "nodesExamined",
+                            validationErrors.nodesExamined ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
+                          )}
                           inputMode="numeric"
                           value={form.nodesExamined}
                           onChange={(e) => setField("nodesExamined", e.target.value)}
@@ -1095,9 +1144,12 @@ export function Calculator() {
                           aria-invalid={Boolean(validationErrors.nodesExamined)}
                         />
                       </Field>
-                      <Field label="Поражено лимфоузлов">
+                      <Field label={reqLabel("nodesAffected", "Поражено лимфоузлов")}>
                         <input
-                          className={cn(inputCls, validationErrors.nodesAffected ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                          className={withRequiredHighlight(
+                            "nodesAffected",
+                            validationErrors.nodesAffected ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
+                          )}
                           inputMode="numeric"
                           value={form.nodesAffected}
                           onChange={(e) => setField("nodesAffected", e.target.value)}
@@ -1105,35 +1157,70 @@ export function Calculator() {
                           aria-invalid={Boolean(validationErrors.nodesAffected)}
                         />
                       </Field>
+                      <button
+                        type="button"
+                        onClick={() => toggleOptional("tumor")}
+                        className="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left"
+                        aria-expanded={showExtraOptions.tumor}
+                      >
+                        <span className="text-sm font-bold text-slate-800">Опухоль - дополнительные параметры</span>
+                        <ChevronDown className={cn("size-5 text-slate-500 transition-transform", showExtraOptions.tumor ? "rotate-0" : "-rotate-90")} aria-hidden />
+                      </button>
+                      {showExtraOptions.tumor && (
+                        <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
+                          <Field label="Периневральная инвазия">
+                            <select className={inputCls} value={form.perineuralInvasion} onChange={(e) => setField("perineuralInvasion", e.target.value)}>
+                              <option value="">— выберите —</option>
+                              <option value="есть">есть</option>
+                              <option value="нет">нет</option>
+                            </select>
+                          </Field>
+                        </div>
+                      )}
                     </FormGroup>
 
                     <FormGroup icon={Share2} title="Молекулярно-генетические маркеры">
-                      <Field label="NRAS">
-                        <select className={inputCls} value={form.nras} onChange={(e) => setField("nras", e.target.value)}>
+                      <Field label={reqLabel("nras", "NRAS")}>
+                        <select className={withRequiredHighlight("nras")} value={form.nras} onChange={(e) => setField("nras", e.target.value)}>
                           <option value="">— выберите —</option>
                           <option value="мутирован">мутирован</option>
                           <option value="не мутирован">не мутирован</option>
                         </select>
                       </Field>
-                      <Field label="BRAF">
-                        <select className={inputCls} value={form.braf} onChange={(e) => setField("braf", e.target.value)}>
-                          <option value="">— выберите —</option>
-                          <option value="мутирован">мутирован</option>
-                          <option value="не мутирован">не мутирован</option>
-                        </select>
-                      </Field>
-                      <Field label="KRAS">
-                        <select className={inputCls} value={form.kras} onChange={(e) => setField("kras", e.target.value)}>
-                          <option value="">— выберите —</option>
-                          <option value="мутирован">мутирован</option>
-                          <option value="не мутирован">не мутирован</option>
-                        </select>
-                      </Field>
+                      <button
+                        type="button"
+                        onClick={() => toggleOptional("molecular")}
+                        className="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left"
+                        aria-expanded={showExtraOptions.molecular}
+                      >
+                        <span className="text-sm font-bold text-slate-800">Молекулярные - дополнительные параметры</span>
+                        <ChevronDown className={cn("size-5 text-slate-500 transition-transform", showExtraOptions.molecular ? "rotate-0" : "-rotate-90")} aria-hidden />
+                      </button>
+                      {showExtraOptions.molecular && (
+                        <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
+                          <div className="grid gap-4">
+                            <Field label="BRAF">
+                              <select className={inputCls} value={form.braf} onChange={(e) => setField("braf", e.target.value)}>
+                                <option value="">— выберите —</option>
+                                <option value="мутирован">мутирован</option>
+                                <option value="не мутирован">не мутирован</option>
+                              </select>
+                            </Field>
+                            <Field label="KRAS">
+                              <select className={inputCls} value={form.kras} onChange={(e) => setField("kras", e.target.value)}>
+                                <option value="">— выберите —</option>
+                                <option value="мутирован">мутирован</option>
+                                <option value="не мутирован">не мутирован</option>
+                              </select>
+                            </Field>
+                          </div>
+                        </div>
+                      )}
                     </FormGroup>
 
                     <FormGroup icon={Scissors} title="Лечение">
-                      <Field label="Название операции">
-                        <select className={inputCls} value={form.operation} onChange={(e) => setField("operation", e.target.value)}>
+                      <Field label={reqLabel("operation", "Название операции")}>
+                        <select className={withRequiredHighlight("operation")} value={form.operation} onChange={(e) => setField("operation", e.target.value)}>
                           {OPERATION_OPTIONS.map((o) => (
                             <option key={o} value={o === "— выберите —" ? "" : o}>
                               {o}
@@ -1141,8 +1228,8 @@ export function Calculator() {
                           ))}
                         </select>
                       </Field>
-                      <Field label="Хирургический доступ">
-                        <select className={inputCls} value={form.surgicalAccess} onChange={(e) => setField("surgicalAccess", e.target.value)}>
+                      <Field label={reqLabel("surgicalAccess", "Хирургический доступ")}>
+                        <select className={withRequiredHighlight("surgicalAccess")} value={form.surgicalAccess} onChange={(e) => setField("surgicalAccess", e.target.value)}>
                           {ACCESS_OPTIONS.map((o) => (
                             <option key={o} value={o === "— выберите —" ? "" : o}>
                               {o}
@@ -1150,41 +1237,8 @@ export function Calculator() {
                           ))}
                         </select>
                       </Field>
-                      <Field label="Адъювантная терапия">
-                        <select className={inputCls} value={form.adjuvantTherapy} onChange={(e) => setField("adjuvantTherapy", e.target.value)}>
-                          <option value="">— выберите —</option>
-                          <option value="да">да</option>
-                          <option value="нет">нет</option>
-                        </select>
-                      </Field>
-                      <Field label="Схема адъювантной терапии">
-                        <select className={inputCls} value={form.adjuvantScheme} onChange={(e) => setField("adjuvantScheme", e.target.value)}>
-                          <option value="">— выберите —</option>
-                          <option value="FOLFOX">FOLFOX</option>
-                          <option value="XELOX">XELOX</option>
-                          <option value="FLOX">FLOX</option>
-                          <option value="капецитабин">капецитабин</option>
-                        </select>
-                      </Field>
-                      <Field label="Количество курсов адъювантной терапии">
-                        <input
-                          className={cn(inputCls, validationErrors.adjuvantCourses ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
-                          inputMode="numeric"
-                          value={form.adjuvantCourses}
-                          onChange={(e) => setField("adjuvantCourses", e.target.value)}
-                          title={validationErrors.adjuvantCourses ?? undefined}
-                          aria-invalid={Boolean(validationErrors.adjuvantCourses)}
-                        />
-                      </Field>
-                      <Field label="Лучевая терапия">
-                        <select className={inputCls} value={form.radiotherapy} onChange={(e) => setField("radiotherapy", e.target.value)}>
-                          <option value="">— выберите —</option>
-                          <option value="да">да</option>
-                          <option value="нет">нет</option>
-                        </select>
-                      </Field>
-                      <Field label="Место лечения">
-                        <select className={inputCls} value={form.therapySite} onChange={(e) => setField("therapySite", e.target.value)}>
+                      <Field label={reqLabel("therapySite", "Место лечения")}>
+                        <select className={withRequiredHighlight("therapySite")} value={form.therapySite} onChange={(e) => setField("therapySite", e.target.value)}>
                           {SITE_OPTIONS.map((o) => (
                             <option key={o} value={o === "— выберите —" ? "" : o}>
                               {o}
@@ -1192,12 +1246,60 @@ export function Calculator() {
                           ))}
                         </select>
                       </Field>
+                      <button
+                        type="button"
+                        onClick={() => toggleOptional("treatment")}
+                        className="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left"
+                        aria-expanded={showExtraOptions.treatment}
+                      >
+                        <span className="text-sm font-bold text-slate-800">Лечение - дополнительные параметры</span>
+                        <ChevronDown className={cn("size-5 text-slate-500 transition-transform", showExtraOptions.treatment ? "rotate-0" : "-rotate-90")} aria-hidden />
+                      </button>
+                      {showExtraOptions.treatment && (
+                        <div className="rounded-2xl border border-slate-100 bg-white/70 p-4">
+                          <div className="grid gap-4">
+                            <Field label="Адъювантная терапия">
+                              <select className={inputCls} value={form.adjuvantTherapy} onChange={(e) => setField("adjuvantTherapy", e.target.value)}>
+                                <option value="">— выберите —</option>
+                                <option value="да">да</option>
+                                <option value="нет">нет</option>
+                              </select>
+                            </Field>
+                            <Field label="Схема адъювантной терапии">
+                              <select className={inputCls} value={form.adjuvantScheme} onChange={(e) => setField("adjuvantScheme", e.target.value)}>
+                                <option value="">— выберите —</option>
+                                <option value="FOLFOX">FOLFOX</option>
+                                <option value="XELOX">XELOX</option>
+                                <option value="FLOX">FLOX</option>
+                                <option value="капецитабин">капецитабин</option>
+                              </select>
+                            </Field>
+                            <Field label="Количество курсов адъювантной терапии">
+                              <input
+                                className={cn(inputCls, validationErrors.adjuvantCourses ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                                inputMode="numeric"
+                                value={form.adjuvantCourses}
+                                onChange={(e) => setField("adjuvantCourses", e.target.value)}
+                                title={validationErrors.adjuvantCourses ?? undefined}
+                                aria-invalid={Boolean(validationErrors.adjuvantCourses)}
+                              />
+                            </Field>
+                            <Field label="Лучевая терапия">
+                              <select className={inputCls} value={form.radiotherapy} onChange={(e) => setField("radiotherapy", e.target.value)}>
+                                <option value="">— выберите —</option>
+                                <option value="да">да</option>
+                                <option value="нет">нет</option>
+                              </select>
+                            </Field>
+                          </div>
+                        </div>
+                      )}
                     </FormGroup>
 
                     <FormGroup icon={FlaskConical} title="Онкомаркеры">
-                      <Field label={`РЭА до лечения, нг/мл (${CE_ANORM_HINT})`}>
+                      <Field label={reqLabel("cea", `РЭА до лечения, нг/мл (${CE_ANORM_HINT})`)}>
                         <input
-                          className={cn(inputCls, validationErrors.cea ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                          className={withRequiredHighlight("cea", validationErrors.cea ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined)}
                           inputMode="decimal"
                           value={form.cea}
                           onChange={(e) => setField("cea", e.target.value)}
@@ -1207,11 +1309,14 @@ export function Calculator() {
                       </Field>
                     </FormGroup>
 
-                    <FormGroup icon={TestTube} title="Лабораторные показатели" className="sm:col-span-2 xl:col-span-3">
-                      <div className="grid gap-4 sm:grid-cols-3">
+                    <FormGroup icon={TestTube} title="Лабораторные показатели">
+                      <div className="grid gap-4">
                         <Field label={reqLabel("lymphocytesAbs", "Лимфоциты (абс.), ×10⁹/л")}>
                           <input
-                            className={cn(inputCls, validationErrors.lymphocytesAbs ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                            className={withRequiredHighlight(
+                              "lymphocytesAbs",
+                              validationErrors.lymphocytesAbs ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
+                            )}
                             inputMode="decimal"
                             value={form.lymphocytesAbs}
                             onChange={(e) => setField("lymphocytesAbs", e.target.value)}
@@ -1221,7 +1326,10 @@ export function Calculator() {
                         </Field>
                         <Field label={reqLabel("leukocytes", "Лейкоциты, ×10⁹/л")}>
                           <input
-                            className={cn(inputCls, validationErrors.leukocytes ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                            className={withRequiredHighlight(
+                              "leukocytes",
+                              validationErrors.leukocytes ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
+                            )}
                             inputMode="decimal"
                             value={form.leukocytes}
                             onChange={(e) => setField("leukocytes", e.target.value)}
@@ -1231,7 +1339,10 @@ export function Calculator() {
                         </Field>
                         <Field label={reqLabel("hemoglobin", "Гемоглобин, г/л")}>
                           <input
-                            className={cn(inputCls, validationErrors.hemoglobin ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                            className={withRequiredHighlight(
+                              "hemoglobin",
+                              validationErrors.hemoglobin ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
+                            )}
                             inputMode="numeric"
                             value={form.hemoglobin}
                             onChange={(e) => setField("hemoglobin", e.target.value)}
@@ -1241,7 +1352,10 @@ export function Calculator() {
                         </Field>
                         <Field label={reqLabel("platelets", "Тромбоциты, ×10⁹/л")}>
                           <input
-                            className={cn(inputCls, validationErrors.platelets ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                            className={withRequiredHighlight(
+                              "platelets",
+                              validationErrors.platelets ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
+                            )}
                             inputMode="numeric"
                             value={form.platelets}
                             onChange={(e) => setField("platelets", e.target.value)}
@@ -1251,7 +1365,7 @@ export function Calculator() {
                         </Field>
                         <Field label={reqLabel("ast", "АСТ, Ед/л")}>
                           <input
-                            className={cn(inputCls, validationErrors.ast ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                            className={withRequiredHighlight("ast", validationErrors.ast ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined)}
                             inputMode="numeric"
                             value={form.ast}
                             onChange={(e) => setField("ast", e.target.value)}
@@ -1261,7 +1375,10 @@ export function Calculator() {
                         </Field>
                         <Field label={reqLabel("bilirubin", "Билирубин общий, мкмоль/л")}>
                           <input
-                            className={cn(inputCls, validationErrors.bilirubin ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                            className={withRequiredHighlight(
+                              "bilirubin",
+                              validationErrors.bilirubin ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
+                            )}
                             inputMode="decimal"
                             value={form.bilirubin}
                             onChange={(e) => setField("bilirubin", e.target.value)}
@@ -1273,18 +1390,18 @@ export function Calculator() {
 
                       <button
                         type="button"
-                        onClick={() => setShowExtraLabs((v) => !v)}
+                        onClick={() => toggleOptional("labs")}
                         className="mt-4 inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left"
-                        aria-expanded={showExtraLabs}
+                        aria-expanded={showExtraOptions.labs}
                       >
-                        <span className="text-sm font-bold text-slate-800">Показать все прогностические параметры</span>
-                        <ChevronDown className={cn("size-5 text-slate-500 transition-transform", showExtraLabs ? "rotate-0" : "-rotate-90")} aria-hidden />
+                        <span className="text-sm font-bold text-slate-800">Лаборатория - дополнительные параметры</span>
+                        <ChevronDown className={cn("size-5 text-slate-500 transition-transform", showExtraOptions.labs ? "rotate-0" : "-rotate-90")} aria-hidden />
                       </button>
 
-                      {showExtraLabs && (
+                      {showExtraOptions.labs && (
                         <div className="mt-3 rounded-2xl border border-slate-100 bg-white/70 p-4">
                           <p className="text-xs text-slate-500">Прогностически значимые показатели, часто отсутствуют в первичной выгрузке и могут быть дообогащены.</p>
-                          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                          <div className="mt-4 grid gap-4">
                             <Field label="Альбумин сыворотки, г/л">
                               <input
                                 className={cn(inputCls, validationErrors.albumin ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
@@ -1341,7 +1458,7 @@ export function Calculator() {
                     </FormGroup>
 
                     <FormGroup icon={Users} title="Статус и сопутствующие заболевания">
-                      <div className="grid gap-4 sm:grid-cols-3">
+                      <div className="grid gap-4">
                         <Field label="Сахарный диабет">
                           <select className={inputCls} value={form.diabetes} onChange={(e) => setField("diabetes", e.target.value)}>
                             <option value="">— выберите —</option>
@@ -1349,16 +1466,14 @@ export function Calculator() {
                             <option value="нет">нет</option>
                           </select>
                         </Field>
-                        <div className="sm:col-span-2">
-                          <Field label="Другие значимые сопутствующие заболевания">
-                            <input
-                              className={inputCls}
-                              value={form.comorbidities}
-                              onChange={(e) => setField("comorbidities", e.target.value)}
-                              placeholder="Например: ИБС, ХБП, ХОБЛ…"
-                            />
-                          </Field>
-                        </div>
+                        <Field label="Другие значимые сопутствующие заболевания">
+                          <input
+                            className={inputCls}
+                            value={form.comorbidities}
+                            onChange={(e) => setField("comorbidities", e.target.value)}
+                            placeholder="Например: ИБС, ХБП, ХОБЛ…"
+                          />
+                        </Field>
                       </div>
                     </FormGroup>
 
@@ -1425,18 +1540,20 @@ export function Calculator() {
                     <button
                       type="button"
                       onClick={handleCalculate}
-                      disabled={filledRequired < REQUIRED_MIN_FIELDS || blockingValidationErrors}
-                      className={cn(
-                        "inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl px-6 text-sm font-bold text-white shadow-lg transition-colors sm:flex-none min-w-[220px]",
-                        filledRequired < REQUIRED_MIN_FIELDS || blockingValidationErrors
-                          ? "bg-slate-300 shadow-none cursor-not-allowed"
-                          : "bg-indigo-600 shadow-indigo-500/30 hover:bg-indigo-700"
-                      )}
+                      className="inline-flex h-11 min-w-[220px] flex-1 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 transition-colors hover:bg-indigo-700 sm:flex-none"
                     >
                       <CalculatorIcon className="size-4" aria-hidden />
                       Рассчитать прогноз
                     </button>
                   </div>
+
+                  {submitAttempted && (hasMissingRequired || blockingValidationErrors) && (
+                    <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+                      {hasMissingRequired
+                        ? `Обязательные поля не заполнены: ${missingRequiredKeys.size}. Пустые поля подсвечены красным.`
+                        : "Проверьте формат обязательных числовых полей: есть некорректные значения."}
+                    </div>
+                  )}
 
                   {accuracyWarning && (
                     <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
@@ -1451,7 +1568,7 @@ export function Calculator() {
           {/* Нижняя зона ~30% — результаты */}
           <section
             className={cn(
-              "min-h-[32vh] flex-shrink-0 transition-opacity",
+              "w-full min-h-[32vh] flex-shrink-0 transition-opacity",
               hasResult ? "opacity-100" : "pointer-events-none opacity-40"
             )}
             aria-label="Результаты прогноза"
@@ -2253,6 +2370,7 @@ function BarPlaceholder({ form, outcome, horizon }: { form: FormState; outcome: 
     v: Math.round(r.contribution * 10) / 10,
     sign: r.contribution >= 0 ? "pos" : "neg",
   }));
+  const chartHeight = Math.max(320, data.length * 44);
 
   return (
     <div>
@@ -2260,12 +2378,12 @@ function BarPlaceholder({ form, outcome, horizon }: { form: FormState; outcome: 
       <div className="mt-1 text-xs text-slate-500">
         Исход: {outcome === "recurrence" ? "рецидив" : "летальный исход"}, горизонт: {horizon} год
       </div>
-      <div className="mt-3 h-56 w-full min-w-0 overflow-hidden">
+      <div className="mt-3 w-full min-w-0 overflow-hidden" style={{ height: chartHeight }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} layout="vertical" margin={{ top: 8, right: 12, left: 36, bottom: 0 }}>
+          <BarChart data={data} layout="vertical" barSize={14} barCategoryGap="32%" margin={{ top: 8, right: 12, left: 24, bottom: 0 }}>
             <CartesianGrid strokeDasharray="4 4" stroke="#e2e8f0" />
             <XAxis type="number" tickFormatter={(v) => `${v}%`} />
-            <YAxis type="category" dataKey="name" width={190} tick={<WrappedYAxisTick />} tickMargin={10} />
+            <YAxis type="category" dataKey="name" width={220} interval={0} tick={<WrappedYAxisTick />} tickMargin={10} />
             <Tooltip formatter={(v: number) => `${v > 0 ? "+" : ""}${v}%`} />
             <Bar dataKey="v" radius={[8, 8, 8, 8]}>
               {data.map((entry) => (
@@ -2797,7 +2915,7 @@ function CohortComparisonTable({ form }: { form: FormState }) {
       case "pM":
         return pMToNum(v);
       case "gradeG": {
-        const m: Record<string, number> = { G1: 1, G2: 2, G3: 3, G4: 4 };
+        const m: Record<string, number> = { GX: 0, G1: 1, G2: 2, G3: 3, G4: 4 };
         return m[v] ?? 0;
       }
       case "lymphovascularInvasion":
