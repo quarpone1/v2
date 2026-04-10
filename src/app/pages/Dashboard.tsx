@@ -283,9 +283,13 @@ export function Dashboard() {
                       </div>
                     </div>
                     
-                    <Link to={`/patients/${patient.id}`} className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-all text-slate-400">
+                    <span
+                      className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-300 cursor-not-allowed"
+                      aria-label="Профиль недоступен"
+                      title="Вход в профиль пациента отключен"
+                    >
                       <ArrowRight size={18} />
-                    </Link>
+                    </span>
                   </div>
                 </div>
               ))}

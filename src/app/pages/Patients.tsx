@@ -1,5 +1,4 @@
 import { motion } from "motion/react";
-import { Link } from "react-router";
 import { patientsData } from "../../data/mock";
 import { Card } from "../components/Card";
 import { Search, Filter, Eye, UserRound } from "lucide-react";
@@ -107,24 +106,13 @@ export function Patients() {
                     </span>
                   </td>
                   <td className="py-4 pr-4 text-right">
-                    {"prognosis" in patient && patient.prognosis ? (
-                      <Link
-                        to={`/patients/${patient.id}`}
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                        aria-label="Открыть профиль пациента"
-                        title="Открыть профиль"
-                      >
-                        <Eye size={18} />
-                      </Link>
-                    ) : (
-                      <span
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-300 cursor-not-allowed"
-                        aria-label="Профиль недоступен"
-                        title="Профиль недоступен: нет данных индивидуального прогноза"
-                      >
-                        <Eye size={18} />
-                      </span>
-                    )}
+                    <span
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-slate-300 cursor-not-allowed"
+                      aria-label="Профиль недоступен"
+                      title="Вход в профиль пациента отключен"
+                    >
+                      <Eye size={18} />
+                    </span>
                   </td>
                 </motion.tr>
               ))}

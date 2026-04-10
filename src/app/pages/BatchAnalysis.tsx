@@ -466,13 +466,14 @@ export function BatchAnalysis() {
                       {r.finishedAt.replace("T", " ").slice(0, 19)}
                     </td>
                     <td className="px-6 pr-6 py-3.5 text-right">
-                      <Link
-                        to={`/patients/${r.id}`}
-                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-indigo-600 font-semibold hover:bg-indigo-50"
+                      <span
+                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-slate-300 font-semibold cursor-not-allowed"
+                        aria-label="Профиль недоступен"
+                        title="Вход в профиль пациента отключен"
                       >
                         Карточка
                         <ArrowRight className="size-4" aria-hidden />
-                      </Link>
+                      </span>
                     </td>
                   </motion.tr>
                 ))}
