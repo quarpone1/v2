@@ -32,7 +32,7 @@ import {
 
 export function Dashboard() {
   const stats = [
-    { title: "Пациенты в регистре", value: "1,248", icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
+    { title: "Пациенты в регистре", value: "1248", icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
     { title: "Группа высокого риска", value: "18%", icon: AlertTriangle, color: "text-red-500", bg: "bg-red-500/10" },
     { title: "Точность предикции", value: "94.2%", icon: TrendingUp, color: "text-emerald-500", bg: "bg-emerald-500/10" },
   ];
@@ -58,7 +58,7 @@ export function Dashboard() {
       <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-indigo-800">
-            Прогнозирование риска летального исхода
+            Прогнозирование риска рецидива и риска летального исхода
           </h1>
           <p className="text-slate-500 mt-2 font-medium">
             Обзор возможностей Онко Ассистент — для кого система и чем она полезна.

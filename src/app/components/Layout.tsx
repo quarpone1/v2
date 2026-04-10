@@ -125,6 +125,7 @@ const navItems: NavItem[] = [
 
 export function Layout() {
   const location = useLocation();
+  const showPatientSearch = location.pathname === "/calculator" || location.pathname.startsWith("/calculator/");
   const [showRoleSelector, setShowRoleSelector] = useState(false);
   const [currentRole, setCurrentRole] = useState(ROLES[1]);
   const [isDoctorTooltipVisible, setIsDoctorTooltipVisible] = useState(false);
@@ -195,7 +196,7 @@ export function Layout() {
         </div>
 
         <div
-          className="relative mb-4 flex items-center gap-3 px-2 py-3 bg-white/40 border border-white/50 rounded-2xl backdrop-blur-md shrink-0"
+          className="relative mb-4 flex items-start gap-3 px-2 py-3 bg-white/40 border border-white/50 rounded-2xl backdrop-blur-md shrink-0"
           onMouseEnter={(e) => {
             updateDoctorTooltipPosition(e.clientX, e.clientY);
             setIsDoctorTooltipVisible(true);
@@ -203,13 +204,12 @@ export function Layout() {
           onMouseMove={(e) => updateDoctorTooltipPosition(e.clientX, e.clientY)}
           onMouseLeave={() => setIsDoctorTooltipVisible(false)}
         >
-          <img
-            src="https://images.unsplash.com/photo-1612349317150-e410f624c427?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-            alt=""
-            className="w-10 h-10 rounded-full border-2 border-white object-cover shadow-sm shrink-0"
-          />
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-medium text-slate-900 leading-snug whitespace-normal break-words">Смирнов В.Д., врач-онколог</span>
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-full border-2 border-white bg-slate-100 text-slate-500 shadow-sm">
+            <UserRound className="size-5" aria-hidden />
+          </div>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-sm font-medium leading-snug text-slate-900">Смирнов В.Д.</span>
+            <span className="text-sm font-medium leading-snug text-slate-700">Врач-онколог</span>
           </div>
         </div>
 
@@ -265,8 +265,7 @@ export function Layout() {
           })}
         </nav>
 
-        <div className="mt-4 pt-4 border-t border-white/50 shrink-0 space-y-3">
-          <p className="text-center text-[11px] text-slate-400 font-medium">Версия 1.0.2</p>
+        <div className="mt-4 shrink-0 space-y-3 border-t border-white/50 pt-4">
           <NavLink
             to="/settings"
             className={cn(
@@ -292,7 +291,7 @@ export function Layout() {
             Врач-онколог
           </div>
         </div>
-        <div className="mt-auto pt-4 shrink-0">
+        <div className="mt-auto shrink-0 flex flex-col gap-3 pt-4">
           <div className="rounded-2xl border border-white/60 bg-white/50 px-3 py-3 backdrop-blur-md">
             <div className="flex items-start gap-3">
               <img
@@ -308,23 +307,28 @@ export function Layout() {
               </div>
             </div>
           </div>
+          <p className="px-1 text-left text-[11px] font-medium text-slate-400">Версия 1.0.2</p>
         </div>
       </aside>
 
       <div className="flex-1 flex flex-col h-full min-w-0 z-10 relative">
         <header className="h-[80px] px-3 sm:px-5 lg:px-6 flex items-center justify-between gap-4 z-20 border-b border-white/20 bg-white/10 backdrop-blur-md shrink-0">
-          <div className="flex-1 max-w-md min-w-0 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} aria-hidden />
-            <label htmlFor="global-search" className="sr-only">
-              Поиск по пациентам
-            </label>
-            <input
-              id="global-search"
-              type="search"
-              placeholder="Поиск по пациентам (ID, диагноз)..."
-              className="w-full h-11 pl-11 pr-4 bg-white/50 border border-white/60 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all shadow-sm backdrop-blur-sm"
-            />
-          </div>
+          {showPatientSearch ? (
+            <div className="flex-1 max-w-md min-w-0 relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} aria-hidden />
+              <label htmlFor="global-search" className="sr-only">
+                Поиск по пациентам
+              </label>
+              <input
+                id="global-search"
+                type="search"
+                placeholder="Поиск по пациентам (ID, диагноз)..."
+                className="w-full h-11 pl-11 pr-4 bg-white/50 border border-white/60 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all shadow-sm backdrop-blur-sm"
+              />
+            </div>
+          ) : (
+            <div className="min-w-0 flex-1" aria-hidden />
+          )}
 
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <button

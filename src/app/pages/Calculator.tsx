@@ -285,11 +285,13 @@ function computeScaledFactorContribs(
   const baselineRisk = getRiskAt(reference, outcome, horizon);
   const delta = patientRisk - baselineRisk;
 
+  // Без умножения всех сырьевых влияний на HORIZON_MULT здесь: иначе множитель сокращается
+  // при нормализации (delta/denom) и вклад почти не реагирует на 1/3/5 лет.
   const rawValues = FACTOR_DEFS.map((d) => {
     const v = d.getValue(form);
     const r = d.getValue(reference);
     const rawInfluence = d.scale > 0 ? ((v - r) / d.scale) * d.direction : 0;
-    return rawInfluence * 10 * HORIZON_MULT[horizon] * OUTCOME_MULT[outcome];
+    return rawInfluence * 10 * OUTCOME_MULT[outcome];
   });
 
   const sumSigned = rawValues.reduce((s, v) => s + v, 0);
@@ -300,7 +302,7 @@ function computeScaledFactorContribs(
   return FACTOR_DEFS.map((d, idx) => ({
     id: d.id,
     title: d.title,
-    contribution: rawValues[idx] * scale,
+    contribution: rawValues[idx] * scale * HORIZON_MULT[horizon],
     modifiable: d.modifiable,
   })).sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
 }
@@ -1059,13 +1061,17 @@ export function Calculator() {
 
               {!collapsed.form && (
                 <div className="px-5 pb-6 sm:px-7">
-                  <div className="mt-6 flex flex-col gap-6">
+                  <div className="mt-3 flex flex-col gap-6">
                     <div className="flex flex-col gap-6 min-[1200px]:flex-row min-[1200px]:items-start">
                       <div className="flex flex-col gap-6 min-[1200px]:flex-1">
+                      <div className="grid grid-cols-1 gap-6 min-[1200px]:grid-cols-2 min-[1200px]:items-start">
                       <FormGroup icon={User} title="Демография и идентификация" className="h-fit" cols={1}>
                       <Field label={reqLabel("age", "Возраст")}>
                         <input
-                          className={withRequiredHighlight("age", validationErrors.age ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined)}
+                          className={cn(
+                            withRequiredHighlight("age", validationErrors.age ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined),
+                            "max-w-[6.5rem]"
+                          )}
                           inputMode="numeric"
                           value={form.age}
                           onChange={(e) => setField("age", e.target.value)}
@@ -1161,7 +1167,9 @@ export function Calculator() {
                         </div>
                       )}
                     </FormGroup>
+                      </div>
 
+                      <div className="grid grid-cols-1 gap-6 min-[1200px]:grid-cols-2 min-[1200px]:items-start">
                       <FormGroup icon={FlaskConical} title="Онкомаркеры" className="h-fit" cols={1}>
                       <Field label={reqLabel("cea", `РЭА до лечения, нг/мл (${CE_ANORM_HINT})`)}>
                         <input
@@ -1193,6 +1201,155 @@ export function Calculator() {
                           />
                         </Field>
                       </div>
+                    </FormGroup>
+                      </div>
+
+                    <FormGroup icon={TestTube} title="Лабораторные показатели" className="h-fit">
+                      <div className="grid gap-4 min-[1200px]:col-span-2 min-[1200px]:grid-cols-2">
+                        <Field label={reqLabel("lymphocytesAbs", "Лимфоциты (абс.), ×10⁹/л")}>
+                          <input
+                            className={withRequiredHighlight(
+                              "lymphocytesAbs",
+                              validationErrors.lymphocytesAbs ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
+                            )}
+                            inputMode="decimal"
+                            value={form.lymphocytesAbs}
+                            onChange={(e) => setField("lymphocytesAbs", e.target.value)}
+                            title={validationErrors.lymphocytesAbs ?? undefined}
+                            aria-invalid={Boolean(validationErrors.lymphocytesAbs)}
+                          />
+                        </Field>
+                        <Field label={reqLabel("leukocytes", "Лейкоциты, ×10⁹/л")}>
+                          <input
+                            className={withRequiredHighlight(
+                              "leukocytes",
+                              validationErrors.leukocytes ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
+                            )}
+                            inputMode="decimal"
+                            value={form.leukocytes}
+                            onChange={(e) => setField("leukocytes", e.target.value)}
+                            title={validationErrors.leukocytes ?? undefined}
+                            aria-invalid={Boolean(validationErrors.leukocytes)}
+                          />
+                        </Field>
+                        <Field label={reqLabel("hemoglobin", "Гемоглобин, г/л")}>
+                          <input
+                            className={withRequiredHighlight(
+                              "hemoglobin",
+                              validationErrors.hemoglobin ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
+                            )}
+                            inputMode="numeric"
+                            value={form.hemoglobin}
+                            onChange={(e) => setField("hemoglobin", e.target.value)}
+                            title={validationErrors.hemoglobin ?? undefined}
+                            aria-invalid={Boolean(validationErrors.hemoglobin)}
+                          />
+                        </Field>
+                        <Field label={reqLabel("platelets", "Тромбоциты, ×10⁹/л")}>
+                          <input
+                            className={withRequiredHighlight(
+                              "platelets",
+                              validationErrors.platelets ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
+                            )}
+                            inputMode="numeric"
+                            value={form.platelets}
+                            onChange={(e) => setField("platelets", e.target.value)}
+                            title={validationErrors.platelets ?? undefined}
+                            aria-invalid={Boolean(validationErrors.platelets)}
+                          />
+                        </Field>
+                        <Field label={reqLabel("ast", "АСТ, Ед/л")}>
+                          <input
+                            className={withRequiredHighlight("ast", validationErrors.ast ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined)}
+                            inputMode="numeric"
+                            value={form.ast}
+                            onChange={(e) => setField("ast", e.target.value)}
+                            title={validationErrors.ast ?? undefined}
+                            aria-invalid={Boolean(validationErrors.ast)}
+                          />
+                        </Field>
+                        <Field label={reqLabel("bilirubin", "Билирубин общий, мкмоль/л")}>
+                          <input
+                            className={withRequiredHighlight(
+                              "bilirubin",
+                              validationErrors.bilirubin ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
+                            )}
+                            inputMode="decimal"
+                            value={form.bilirubin}
+                            onChange={(e) => setField("bilirubin", e.target.value)}
+                            title={validationErrors.bilirubin ?? undefined}
+                            aria-invalid={Boolean(validationErrors.bilirubin)}
+                          />
+                        </Field>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleOptional("labs")}
+                        className="mt-4 inline-flex w-full items-center justify-between self-start rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left min-[1200px]:col-span-2"
+                        aria-expanded={showExtraOptions.labs}
+                      >
+                        <span className="text-sm font-bold text-slate-800">Дополнительные параметры</span>
+                        <ChevronDown className={cn("size-5 text-slate-500 transition-transform", showExtraOptions.labs ? "rotate-0" : "-rotate-90")} aria-hidden />
+                      </button>
+
+                      {showExtraOptions.labs && (
+                        <div className="mt-3 w-full rounded-2xl border border-slate-100 bg-white/70 p-4 min-[1200px]:col-span-2">
+                          <p className="text-xs text-slate-500">Прогностически значимые показатели, часто отсутствуют в первичной выгрузке и могут быть дообогащены.</p>
+                          <div className="mt-4 grid gap-4">
+                            <Field label="Альбумин сыворотки, г/л">
+                              <input
+                                className={cn(inputCls, validationErrors.albumin ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                                inputMode="numeric"
+                                value={form.albumin}
+                                onChange={(e) => setField("albumin", e.target.value)}
+                                title={validationErrors.albumin ?? undefined}
+                                aria-invalid={Boolean(validationErrors.albumin)}
+                              />
+                            </Field>
+                            <Field label="Нейтрофилы (абс.), ×10⁹/л">
+                              <input
+                                className={cn(inputCls, validationErrors.neutrophilsAbs ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                                inputMode="decimal"
+                                value={form.neutrophilsAbs}
+                                onChange={(e) => setField("neutrophilsAbs", e.target.value)}
+                                title={validationErrors.neutrophilsAbs ?? undefined}
+                                aria-invalid={Boolean(validationErrors.neutrophilsAbs)}
+                              />
+                            </Field>
+                            <Field label="Щелочная фосфатаза, Ед/л">
+                              <input
+                                className={cn(inputCls, validationErrors.alkalinePhosphatase ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                                inputMode="numeric"
+                                value={form.alkalinePhosphatase}
+                                onChange={(e) => setField("alkalinePhosphatase", e.target.value)}
+                                title={validationErrors.alkalinePhosphatase ?? undefined}
+                                aria-invalid={Boolean(validationErrors.alkalinePhosphatase)}
+                              />
+                            </Field>
+                            <Field label="Фибриноген, г/л">
+                              <input
+                                className={cn(inputCls, validationErrors.fibrinogen ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                                inputMode="decimal"
+                                value={form.fibrinogen}
+                                onChange={(e) => setField("fibrinogen", e.target.value)}
+                                title={validationErrors.fibrinogen ?? undefined}
+                                aria-invalid={Boolean(validationErrors.fibrinogen)}
+                              />
+                            </Field>
+                            <Field label="МНО">
+                              <input
+                                className={cn(inputCls, validationErrors.inr ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
+                                inputMode="decimal"
+                                value={form.inr}
+                                onChange={(e) => setField("inr", e.target.value)}
+                                title={validationErrors.inr ?? undefined}
+                                aria-invalid={Boolean(validationErrors.inr)}
+                              />
+                            </Field>
+                          </div>
+                        </div>
+                      )}
                     </FormGroup>
                       </div>
 
@@ -1371,154 +1528,6 @@ export function Calculator() {
                                 <option value="да">да</option>
                                 <option value="нет">нет</option>
                               </select>
-                            </Field>
-                          </div>
-                        </div>
-                      )}
-                    </FormGroup>
-
-                    <FormGroup icon={TestTube} title="Лабораторные показатели" className="h-fit">
-                      <div className="grid gap-4 min-[1200px]:col-span-2 min-[1200px]:grid-cols-2">
-                        <Field label={reqLabel("lymphocytesAbs", "Лимфоциты (абс.), ×10⁹/л")}>
-                          <input
-                            className={withRequiredHighlight(
-                              "lymphocytesAbs",
-                              validationErrors.lymphocytesAbs ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
-                            )}
-                            inputMode="decimal"
-                            value={form.lymphocytesAbs}
-                            onChange={(e) => setField("lymphocytesAbs", e.target.value)}
-                            title={validationErrors.lymphocytesAbs ?? undefined}
-                            aria-invalid={Boolean(validationErrors.lymphocytesAbs)}
-                          />
-                        </Field>
-                        <Field label={reqLabel("leukocytes", "Лейкоциты, ×10⁹/л")}>
-                          <input
-                            className={withRequiredHighlight(
-                              "leukocytes",
-                              validationErrors.leukocytes ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
-                            )}
-                            inputMode="decimal"
-                            value={form.leukocytes}
-                            onChange={(e) => setField("leukocytes", e.target.value)}
-                            title={validationErrors.leukocytes ?? undefined}
-                            aria-invalid={Boolean(validationErrors.leukocytes)}
-                          />
-                        </Field>
-                        <Field label={reqLabel("hemoglobin", "Гемоглобин, г/л")}>
-                          <input
-                            className={withRequiredHighlight(
-                              "hemoglobin",
-                              validationErrors.hemoglobin ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
-                            )}
-                            inputMode="numeric"
-                            value={form.hemoglobin}
-                            onChange={(e) => setField("hemoglobin", e.target.value)}
-                            title={validationErrors.hemoglobin ?? undefined}
-                            aria-invalid={Boolean(validationErrors.hemoglobin)}
-                          />
-                        </Field>
-                        <Field label={reqLabel("platelets", "Тромбоциты, ×10⁹/л")}>
-                          <input
-                            className={withRequiredHighlight(
-                              "platelets",
-                              validationErrors.platelets ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
-                            )}
-                            inputMode="numeric"
-                            value={form.platelets}
-                            onChange={(e) => setField("platelets", e.target.value)}
-                            title={validationErrors.platelets ?? undefined}
-                            aria-invalid={Boolean(validationErrors.platelets)}
-                          />
-                        </Field>
-                        <Field label={reqLabel("ast", "АСТ, Ед/л")}>
-                          <input
-                            className={withRequiredHighlight("ast", validationErrors.ast ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined)}
-                            inputMode="numeric"
-                            value={form.ast}
-                            onChange={(e) => setField("ast", e.target.value)}
-                            title={validationErrors.ast ?? undefined}
-                            aria-invalid={Boolean(validationErrors.ast)}
-                          />
-                        </Field>
-                        <Field label={reqLabel("bilirubin", "Билирубин общий, мкмоль/л")}>
-                          <input
-                            className={withRequiredHighlight(
-                              "bilirubin",
-                              validationErrors.bilirubin ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : undefined
-                            )}
-                            inputMode="decimal"
-                            value={form.bilirubin}
-                            onChange={(e) => setField("bilirubin", e.target.value)}
-                            title={validationErrors.bilirubin ?? undefined}
-                            aria-invalid={Boolean(validationErrors.bilirubin)}
-                          />
-                        </Field>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => toggleOptional("labs")}
-                        className="mt-4 inline-flex w-full items-center justify-between self-start rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-left min-[1200px]:col-span-2"
-                        aria-expanded={showExtraOptions.labs}
-                      >
-                        <span className="text-sm font-bold text-slate-800">Дополнительные параметры</span>
-                        <ChevronDown className={cn("size-5 text-slate-500 transition-transform", showExtraOptions.labs ? "rotate-0" : "-rotate-90")} aria-hidden />
-                      </button>
-
-                      {showExtraOptions.labs && (
-                        <div className="mt-3 w-full rounded-2xl border border-slate-100 bg-white/70 p-4 min-[1200px]:col-span-2">
-                          <p className="text-xs text-slate-500">Прогностически значимые показатели, часто отсутствуют в первичной выгрузке и могут быть дообогащены.</p>
-                          <div className="mt-4 grid gap-4">
-                            <Field label="Альбумин сыворотки, г/л">
-                              <input
-                                className={cn(inputCls, validationErrors.albumin ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
-                                inputMode="numeric"
-                                value={form.albumin}
-                                onChange={(e) => setField("albumin", e.target.value)}
-                                title={validationErrors.albumin ?? undefined}
-                                aria-invalid={Boolean(validationErrors.albumin)}
-                              />
-                            </Field>
-                            <Field label="Нейтрофилы (абс.), ×10⁹/л">
-                              <input
-                                className={cn(inputCls, validationErrors.neutrophilsAbs ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
-                                inputMode="decimal"
-                                value={form.neutrophilsAbs}
-                                onChange={(e) => setField("neutrophilsAbs", e.target.value)}
-                                title={validationErrors.neutrophilsAbs ?? undefined}
-                                aria-invalid={Boolean(validationErrors.neutrophilsAbs)}
-                              />
-                            </Field>
-                            <Field label="Щелочная фосфатаза, Ед/л">
-                              <input
-                                className={cn(inputCls, validationErrors.alkalinePhosphatase ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
-                                inputMode="numeric"
-                                value={form.alkalinePhosphatase}
-                                onChange={(e) => setField("alkalinePhosphatase", e.target.value)}
-                                title={validationErrors.alkalinePhosphatase ?? undefined}
-                                aria-invalid={Boolean(validationErrors.alkalinePhosphatase)}
-                              />
-                            </Field>
-                            <Field label="Фибриноген, г/л">
-                              <input
-                                className={cn(inputCls, validationErrors.fibrinogen ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
-                                inputMode="decimal"
-                                value={form.fibrinogen}
-                                onChange={(e) => setField("fibrinogen", e.target.value)}
-                                title={validationErrors.fibrinogen ?? undefined}
-                                aria-invalid={Boolean(validationErrors.fibrinogen)}
-                              />
-                            </Field>
-                            <Field label="МНО">
-                              <input
-                                className={cn(inputCls, validationErrors.inr ? "border-red-400 bg-red-50/30 focus:ring-red-500/30" : null)}
-                                inputMode="decimal"
-                                value={form.inr}
-                                onChange={(e) => setField("inr", e.target.value)}
-                                title={validationErrors.inr ?? undefined}
-                                aria-invalid={Boolean(validationErrors.inr)}
-                              />
                             </Field>
                           </div>
                         </div>
