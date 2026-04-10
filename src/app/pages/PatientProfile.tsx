@@ -1,7 +1,7 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useParams, Link } from "react-router";
 import { motion } from "motion/react";
-import { patientsData, survivalData } from "../../data/mock";
+import { patientsData, survivalData, type PatientRecord } from "../../data/mock";
 import { Card } from "../components/Card";
 import { PatientRecommendationsAccordion } from "../components/PatientRecommendationsAccordion";
 import {
@@ -27,9 +27,30 @@ import {
 
 const FEATURES_ANALYZED = 14;
 
+function ValueLine({
+  label,
+  value,
+  suffix,
+}: {
+  label: string;
+  value: ReactNode;
+  suffix?: string;
+}) {
+  const isEmpty = value === null || value === undefined || value === "" || value === "—";
+  return (
+    <div className="flex items-baseline justify-between gap-4 border-b border-slate-100 py-2 last:border-b-0">
+      <div className="text-sm text-slate-500">{label}</div>
+      <div className="text-sm font-semibold text-slate-800 text-right tabular-nums">
+        {isEmpty ? "—" : value}
+        {!isEmpty && suffix ? <span className="ml-1 text-slate-500 font-medium">{suffix}</span> : null}
+      </div>
+    </div>
+  );
+}
+
 export function PatientProfile() {
   const { id } = useParams();
-  const patient = id ? patientsData.find((p) => p.id === id) : undefined;
+  const patient: PatientRecord | undefined = id ? patientsData.find((p) => p.id === id) : undefined;
   const [syncing, setSyncing] = useState<string | null>(null);
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gradId = useId().replace(/:/g, "");
@@ -70,6 +91,8 @@ export function PatientProfile() {
       </motion.div>
     );
   }
+
+  const pr = (patient as any).prognosis as any;
 
   return (
     <motion.div
@@ -297,6 +320,87 @@ export function PatientProfile() {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+          </Card>
+
+          <Card>
+            <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+              <h2 className="font-bold text-lg text-slate-800">Клинические данные пациента</h2>
+            </div>
+
+            {!pr ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                Для этого пациента клинические параметры прогноза в демо-данных не заданы.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="rounded-2xl border border-slate-100 bg-white/60 p-4">
+                  <h3 className="font-bold text-slate-800 mb-2">Паспорт</h3>
+                  <ValueLine label="Пол (как в прогнозе)" value={pr.sex ?? "—"} />
+                  <ValueLine label="Возраст" value={patient.age} suffix="лет" />
+                  <ValueLine label="Рост" value={pr.heightCm} suffix="см" />
+                  <ValueLine label="Вес" value={pr.weightKg} suffix="кг" />
+                </div>
+
+                <div className="rounded-2xl border border-slate-100 bg-white/60 p-4">
+                  <h3 className="font-bold text-slate-800 mb-2">Стадирование и опухоль</h3>
+                  <ValueLine label="Стадия" value={pr.stage ?? patient.stage ?? "—"} />
+                  <ValueLine label="pT" value={pr.pT ?? "—"} />
+                  <ValueLine label="pN" value={pr.pN ?? "—"} />
+                  <ValueLine label="pM" value={pr.pM ?? "—"} />
+                  <ValueLine label="G" value={pr.gradeG ?? "—"} />
+                  <ValueLine label="Лимфоваск. инвазия" value={pr.lymphovascularInvasion ?? "—"} />
+                  <ValueLine label="Периневральная инвазия" value={pr.perineuralInvasion ?? "—"} />
+                  <ValueLine label="Л/у исследовано" value={pr.nodesExamined} />
+                  <ValueLine label="Л/у поражено" value={pr.nodesAffected} />
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 lg:col-span-2">
+                  <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                    <h3 className="font-bold text-slate-800">Лаборатория и лечение</h3>
+                  </div>
+
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/60">
+                    <div className="grid grid-cols-1 lg:grid-cols-2">
+                      {/* headers row */}
+                      <div className="px-4 py-3 sm:px-5 sm:py-3.5 bg-slate-50 border-b border-slate-200">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Лабораторные показатели
+                        </div>
+                      </div>
+                      <div className="px-4 py-3 sm:px-5 sm:py-3.5 bg-slate-50 border-b border-slate-200 lg:border-l lg:border-slate-200">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-600">Лечение</div>
+                      </div>
+
+                      {/* content row */}
+                      <div className="p-4 sm:p-5 bg-white/70">
+                        <ValueLine label="РЭА (CEA)" value={pr.cea} suffix="нг/мл" />
+                        <ValueLine label="Гемоглобин" value={pr.hemoglobin} suffix="г/л" />
+                        <ValueLine label="Лейкоциты" value={pr.leukocytes} suffix="×10⁹/л" />
+                        <ValueLine label="Лимфоциты (абс.)" value={pr.lymphocytesAbs} suffix="×10⁹/л" />
+                        <ValueLine label="Тромбоциты" value={pr.platelets} suffix="×10⁹/л" />
+                        <ValueLine label="АСТ" value={pr.ast} suffix="Ед/л" />
+                        <ValueLine label="Билирубин" value={pr.bilirubin} suffix="мкмоль/л" />
+                        <ValueLine label="Альбумин" value={pr.albumin} suffix="г/л" />
+                      </div>
+
+                      <div className="p-4 sm:p-5 bg-white/70 lg:border-l lg:border-slate-200">
+                        <ValueLine label="Операция" value={pr.operation ?? "—"} />
+                        <ValueLine label="Хирургический доступ" value={pr.surgicalAccess ?? "—"} />
+                        <ValueLine label="Адъювантная терапия" value={pr.adjuvantTherapy ?? "—"} />
+                        <ValueLine label="Схема" value={pr.adjuvantScheme ?? "—"} />
+                        <ValueLine label="Курсы" value={pr.adjuvantCourses} />
+                        <ValueLine label="Лучевая терапия" value={pr.radiotherapy ?? "—"} />
+                        <ValueLine label="Место лечения" value={pr.therapySite ?? "—"} />
+                        <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-500">
+                          Молекулярные маркеры: KRAS — {pr.kras ?? "—"}, NRAS — {pr.nras ?? "—"}, BRAF —{" "}
+                          {pr.braf ?? "—"}.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </Card>
 
           <Card>
