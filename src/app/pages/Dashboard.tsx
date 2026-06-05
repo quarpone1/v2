@@ -14,6 +14,8 @@ import {
   Stethoscope,
   BarChart3,
   Package,
+  ScanSearch,
+  ShieldCheck,
 } from "lucide-react";
 import { Link } from "react-router";
 import { patientsData } from "../../data/mock";
@@ -58,10 +60,10 @@ export function Dashboard() {
       <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-indigo-800">
-            Прогнозирование риска рецидива и риска летального исхода
+            Единая платформа поддержки онкологических решений
           </h1>
           <p className="text-slate-500 mt-2 font-medium">
-            Обзор возможностей Онко Ассистент — для кого система и чем она полезна.
+            Два взаимодополняющих сервиса: прогноз для онкопациентов и раннее выявление для групп риска.
           </p>
         </div>
         
@@ -76,6 +78,57 @@ export function Dashboard() {
       </div>
 
       <section className="space-y-4">
+        <h2 className="text-lg font-bold text-slate-800">Выбор сервиса</h2>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Link
+            to="/calculator"
+            className="group rounded-[32px] border border-indigo-100 bg-white/70 p-5 shadow-sm backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-white"
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700">
+                <Activity size={24} aria-hidden />
+              </div>
+              <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">
+                Существующий сервис
+              </span>
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Прогноз рецидива и летальности</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Для пациентов с уже установленным колоректальным раком. Горизонты прогноза: 1, 3 и 5 лет.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-500">
+              <span className="rounded-full bg-slate-100 px-3 py-1">Врачи-онкологи</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1">30 онкоспецифичных параметров</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1">Лечебные рекомендации</span>
+            </div>
+          </Link>
+
+          <Link
+            to="/early-detection"
+            className="group rounded-[32px] border border-teal-100 bg-white/70 p-5 shadow-sm backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-teal-200 hover:bg-white"
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-teal-100 text-teal-700">
+                <ScanSearch size={24} aria-hidden />
+              </div>
+              <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700">
+                Новый сервис
+              </span>
+            </div>
+            <h3 className="text-xl font-bold text-slate-900">Раннее выявление C34 / C18-C20</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Для пациентов без диагноза рака. Оценка вероятности выявления заболевания на 1, 2 и 3 года.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-500">
+              <span className="rounded-full bg-slate-100 px-3 py-1">Первичное звено</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1">20-25 рутинных параметров</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1">Скрининговые рекомендации</span>
+            </div>
+          </Link>
+        </div>
+      </section>
+
+      <section className="space-y-4">
         <h2 className="text-lg font-bold text-slate-800">Для кого предназначена система</h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Card className="space-y-3">
@@ -83,7 +136,7 @@ export function Dashboard() {
               <div className="flex size-11 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
                 <Stethoscope size={22} />
               </div>
-              <h3 className="font-bold text-slate-800">Врачи</h3>
+              <h3 className="font-bold text-slate-800">Врачи-онкологи</h3>
             </div>
             <p className="text-sm text-slate-600">Объективная оценка риска, объяснимость и экономия времени.</p>
             <FullInfoPanel>
@@ -93,11 +146,11 @@ export function Dashboard() {
           <Card className="space-y-3">
             <div className="flex items-center gap-3">
               <div className="flex size-11 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
-                <UserRound size={22} />
+                <ShieldCheck size={22} />
               </div>
-              <h3 className="font-bold text-slate-800">Пациенты</h3>
+              <h3 className="font-bold text-slate-800">Первичное звено</h3>
             </div>
-            <p className="text-sm text-slate-600">Понятные объяснения, план обследований и динамика маркеров.</p>
+            <p className="text-sm text-slate-600">Раннее выявление групп риска и маршрутизация на скрининг.</p>
             <FullInfoPanel>
               <RefAudiencePatients />
             </FullInfoPanel>

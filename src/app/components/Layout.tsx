@@ -12,6 +12,7 @@ import {
   Microscope,
   Award,
   Database,
+  ScanSearch,
   Settings,
   Search,
   Bell,
@@ -61,6 +62,13 @@ const navItems: NavItem[] = [
     label: "Индивидуальный прогноз",
     icon: UserRound,
     isActive: (p) => p === "/calculator" || p.startsWith("/calculator/"),
+  },
+  {
+    kind: "link",
+    to: "/early-detection",
+    label: "Раннее выявление",
+    icon: ScanSearch,
+    isActive: (p) => p === "/early-detection" || p.startsWith("/early-detection/"),
   },
   {
     kind: "link",
@@ -125,7 +133,9 @@ const navItems: NavItem[] = [
 
 export function Layout() {
   const location = useLocation();
-  const showPatientSearch = location.pathname === "/calculator" || location.pathname.startsWith("/calculator/");
+  const isEarlyDetection = location.pathname === "/early-detection" || location.pathname.startsWith("/early-detection/");
+  const showPatientSearch =
+    location.pathname === "/calculator" || location.pathname.startsWith("/calculator/") || isEarlyDetection;
   const [showRoleSelector, setShowRoleSelector] = useState(false);
   const [currentRole, setCurrentRole] = useState(ROLES[1]);
   const [isDoctorTooltipVisible, setIsDoctorTooltipVisible] = useState(false);
@@ -208,8 +218,12 @@ export function Layout() {
             <UserRound className="size-5" aria-hidden />
           </div>
           <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="text-sm font-medium leading-snug text-slate-900">Смирнов В.Д.</span>
-            <span className="text-sm font-medium leading-snug text-slate-700">Врач-онколог</span>
+            <span className="text-sm font-medium leading-snug text-slate-900">
+              {isEarlyDetection ? "Иванов А.Б." : "Смирнов В.Д."}
+            </span>
+            <span className="text-sm font-medium leading-snug text-slate-700">
+              {isEarlyDetection ? "Врач-терапевт" : "Врач-онколог"}
+            </span>
           </div>
         </div>
 
@@ -286,9 +300,9 @@ export function Layout() {
               isDoctorTooltipVisible ? "opacity-100" : "opacity-0"
             )}
           >
-            Смирнов В.Д.
+            {isEarlyDetection ? "Иванов А.Б." : "Смирнов В.Д."}
             <br />
-            Врач-онколог
+            {isEarlyDetection ? "Врач-терапевт" : "Врач-онколог"}
           </div>
         </div>
         <div className="mt-auto shrink-0 flex flex-col gap-3 pt-4">
@@ -307,7 +321,9 @@ export function Layout() {
               </div>
             </div>
           </div>
-          <p className="px-1 text-left text-[11px] font-medium text-slate-400">Версия 1.0.2</p>
+          <p className="px-1 text-left text-[11px] font-medium text-slate-400">
+            {isEarlyDetection ? "Сервис раннего выявления. Версия 1.0" : "Версия 1.0.2"}
+          </p>
         </div>
       </aside>
 
@@ -322,7 +338,7 @@ export function Layout() {
               <input
                 id="global-search"
                 type="search"
-                placeholder="Поиск по пациентам (ID, диагноз)..."
+                placeholder={isEarlyDetection ? "Поиск по цифровому ID пациента..." : "Поиск по пациентам (ID, диагноз)..."}
                 className="w-full h-11 pl-11 pr-4 bg-white/50 border border-white/60 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all shadow-sm backdrop-blur-sm"
               />
             </div>

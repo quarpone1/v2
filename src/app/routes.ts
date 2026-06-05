@@ -9,6 +9,7 @@ import { Settings } from "./pages/Settings";
 import { Integrations } from "./pages/Integrations";
 import { Models } from "./pages/Models";
 import { BatchAnalysis } from "./pages/BatchAnalysis";
+import { EarlyDetection } from "./pages/EarlyDetection";
 
 export const router = createBrowserRouter([
   {
@@ -19,6 +20,7 @@ export const router = createBrowserRouter([
       { path: "patients", Component: Patients },
       { path: "patients/:id", Component: PatientProfile },
       { path: "calculator", Component: Calculator },
+      { path: "early-detection", Component: EarlyDetection },
       { path: "batch-analysis", Component: BatchAnalysis },
       { path: "analytics", Component: Analytics },
       { path: "integrations", Component: Integrations },
