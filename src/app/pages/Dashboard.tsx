@@ -89,7 +89,7 @@ export function Dashboard() {
                 <Activity size={24} aria-hidden />
               </div>
               <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">
-                Существующий сервис
+                
               </span>
             </div>
             <h3 className="text-xl font-bold text-slate-900">Прогноз рецидива и летальности</h3>
@@ -112,7 +112,7 @@ export function Dashboard() {
                 <ScanSearch size={24} aria-hidden />
               </div>
               <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-700">
-                Новый сервис
+                Новое
               </span>
             </div>
             <h3 className="text-xl font-bold text-slate-900">Раннее выявление C34 / C18-C20</h3>
