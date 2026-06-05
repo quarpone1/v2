@@ -635,7 +635,7 @@ export function EarlyDetection() {
               Сервис раннего выявления для пациентов групп риска
             </h1>
             <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-600">
-              Оценка вероятности выявления C34 и C18-C20 на горизонтах 1, 2 и 3 года по рутинным
+              Оценка вероятности выявления диагнозов C34 и C18-C20 на горизонтах 1, 2 и 3 года по
               данным амбулаторной карты: демографии, витальным показателям, лаборатории, обращениям и скринингу.
             </p>
           </div>
@@ -743,7 +743,7 @@ export function EarlyDetection() {
             className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-300"
           >
             <RefreshCw size={18} aria-hidden />
-            Сбросить
+            Вернуть пример пациента
           </button>
         </div>
       </Zone>

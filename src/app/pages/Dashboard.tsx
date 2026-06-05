@@ -117,7 +117,7 @@ export function Dashboard() {
             </div>
             <h3 className="text-xl font-bold text-slate-900">Раннее выявление C34 / C18-C20</h3>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Для пациентов без диагноза рака. Оценка вероятности выявления заболевания на 1, 2 и 3 года.
+              Для пациентов без диагноза рак. Оценка вероятности заболевания на 1, 2 и 3 года.
             </p>
             <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-500">
               <span className="rounded-full bg-slate-100 px-3 py-1">Первичное звено</span>
