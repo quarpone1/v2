@@ -619,7 +619,7 @@ export function EarlyDetection() {
         openZones={openZones}
         setOpenZones={setOpenZones}
       >
-        <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+        <div className="flex flex-col gap-4">
           <div>
             <div className="mb-5 flex flex-wrap items-center gap-2">
               <StatusPill kind="neutral">Пациент ID {form.patientId || "не задан"}</StatusPill>
@@ -639,7 +639,7 @@ export function EarlyDetection() {
               данным амбулаторной карты: демографии, витальным показателям, лаборатории, обращениям и скринингу.
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+          <div className="grid gap-3 grid-cols-3">
             <div className="rounded-3xl border border-teal-100 bg-teal-50/70 p-4">
               <div className="text-xs font-bold uppercase tracking-wide text-teal-700">Объем данных</div>
               <div className="mt-1 text-2xl font-bold text-slate-900">{loadedEvents}/{availableEvents}</div>
@@ -793,8 +793,7 @@ export function EarlyDetection() {
               ))}
             </div>
 
-            <div className="grid gap-5 xl:grid-cols-[1.45fr_0.9fr]">
-              <Card noPadding className="rounded-3xl">
+            <Card noPadding className="rounded-3xl">
                 <div className="flex gap-2 overflow-x-auto border-b border-slate-200/60 p-3">
                   {tabs.map((tab) => (
                     <button
@@ -953,7 +952,7 @@ export function EarlyDetection() {
                 </div>
               </Card>
 
-              <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
                 <Card className="rounded-3xl">
                   <div className="mb-4 flex items-center gap-2">
                     <AlertTriangle className="text-amber-600" size={20} aria-hidden />
@@ -1027,7 +1026,6 @@ export function EarlyDetection() {
                   </div>
                 </Card>
               </div>
-            </div>
 
             <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
               <Card className="rounded-3xl">

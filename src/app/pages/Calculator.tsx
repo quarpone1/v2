@@ -986,7 +986,7 @@ export function Calculator() {
           >
             <div className="min-w-0 text-left">
               <h1 id="blohin-prognosis-title" className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-                Индивидуальный прогноз
+                Прогноз рецидива и летальности
               </h1>
               <p className="mt-1 text-sm leading-relaxed text-slate-600 sm:text-base">
                 30 прогностических параметров. Два исхода: рецидив и летальный исход. Горизонты: 1, 3 и 5 лет.

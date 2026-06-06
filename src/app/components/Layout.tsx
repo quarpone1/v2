@@ -59,7 +59,7 @@ const navItems: NavItem[] = [
   {
     kind: "link",
     to: "/calculator",
-    label: "Индивидуальный прогноз",
+    label: "Прогноз рецидива и летальности",
     icon: UserRound,
     isActive: (p) => p === "/calculator" || p.startsWith("/calculator/"),
   },

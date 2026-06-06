@@ -59,3 +59,13 @@ or initiating processes. They communicate interactivity and should have clear, a
   * Visual Style : Text-only with no border, using primary color
   * Usage : For actions that should be available but not emphasized
 -->
+<!--<div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <p className="font-bold mb-2">Срезы из cuts.docx, которые не реализованы — в mock-реестре нет нужных полей:</p>
+              <ul className="space-y-1 list-disc list-inside text-amber-800">
+                <li><b>Клинико-лабораторные</b> (глюкоза, HGB, частота дыхания, визиты к терапевту) — нет полей в earlyDetectionPatientsData</li>
+                <li><b>Поведенческие</b> (курение, контроль гипертонии/диабета, тревожность) — нет в earlyDetectionPatientsData</li>
+                <li><b>Динамика риска 1→3 года на пациента</b> — нет risk1y/risk2y/risk3y на запись</li>
+                <li><b>Сравнительные</b> (точность модели, ложно+/−) — нет поля actualOutcome</li>
+                <li><b>Регион / тип учреждения</b> — нет поля region/institutionType</li>
+              </ul>
+            </div> -->

@@ -235,7 +235,7 @@ export function Dashboard() {
             to="/calculator"
             className="flex flex-col gap-1 rounded-2xl border border-white/70 bg-white/60 p-4 shadow-sm backdrop-blur-md transition-colors hover:border-indigo-200 hover:bg-white/80"
           >
-            <span className="font-semibold text-slate-800">Индивидуальный прогноз</span>
+            <span className="font-semibold text-slate-800">Прогноз рецидива и летальности</span>
             <span className="text-xs text-slate-500">Оценка риска для одного пациента</span>
           </Link>
           <Link
