@@ -538,13 +538,14 @@ export function Analytics() {
                     const isEarly = registry.source === "early";
                     const earlyP = isEarly ? (p as (typeof earlyDetectionPatientsFull)[0]) : null;
                     const date = isEarly ? earlyP!.lastCalculated : (p as (typeof patientsData)[0]).lastVisit;
-                    const handleRowClick = isEarly
-                      ? () => { setRegistry((s) => ({ ...s, open: false })); navigate(`/patients/early/${p.id}`); }
-                      : undefined;
+                    const handleRowClick = () => {
+                      setRegistry((s) => ({ ...s, open: false }));
+                      navigate(isEarly ? `/patients/early/${p.id}` : `/patients/${p.id}`);
+                    };
                     return (
                       <tr
                         key={p.id}
-                        className={`hover:bg-slate-50 transition-colors ${isEarly ? "cursor-pointer" : ""}`}
+                        className="hover:bg-slate-50 transition-colors cursor-pointer"
                         onClick={handleRowClick}
                       >
                         <td className="py-3 pr-4 font-semibold text-slate-800">{p.id}</td>
