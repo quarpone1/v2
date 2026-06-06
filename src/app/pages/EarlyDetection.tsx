@@ -40,7 +40,16 @@ import {
   YAxis,
 } from "recharts";
 import { Card } from "../components/Card";
+import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { cn } from "../../lib/utils";
+import {
+  c34Factors,
+  c18c20Factors,
+  getFormValueLabel,
+  C34_MAX_IMPORTANCE,
+  C18C20_MAX_IMPORTANCE,
+  type RiskFactorEntry,
+} from "../../data/riskFactors";
 
 type Horizon = 1 | 2 | 3;
 type ZoneKey = "summary" | "input" | "results";
@@ -343,6 +352,136 @@ function calculateRisk(form: EarlyDetectionForm, simulateEffect: boolean) {
     ],
     effectReduction,
   };
+}
+
+function DiagnosisTag({ label, color }: { label: string; color: "blue" | "emerald" }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide",
+        color === "blue" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+function FactorPopover({
+  factor,
+  maxImportance,
+  diagnosisLabel,
+  totalFactors,
+  form,
+}: {
+  factor: RiskFactorEntry;
+  maxImportance: number;
+  diagnosisLabel: string;
+  totalFactors: number;
+  form: EarlyDetectionForm;
+}) {
+  const relPct = Math.round((factor.importance / maxImportance) * 100);
+  const patientValue = factor.formKey ? form[factor.formKey as keyof EarlyDetectionForm] : undefined;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 transition text-[11px] font-bold"
+          aria-label="Подробнее о факторе"
+        >
+          ⓘ
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-0 overflow-hidden" align="end">
+        <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">{diagnosisLabel} · ранг #{factor.rank} из {totalFactors}</p>
+          <p className="mt-1 text-sm font-semibold text-slate-900 leading-snug">{factor.displayName}</p>
+        </div>
+        <div className="px-4 py-3 space-y-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-0.5">Технический признак</p>
+            <p className="text-xs text-slate-600 break-words">{factor.rawName}</p>
+          </div>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-0.5">Важность</p>
+              <p className="text-sm font-bold text-slate-900">{factor.importance}</p>
+            </div>
+            <div className="flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-0.5">Относительная</p>
+              <p className="text-sm font-bold text-teal-700">{relPct}%</p>
+            </div>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-0.5">Способ агрегации</p>
+            <p className="text-xs text-slate-600">{factor.aggregation}</p>
+          </div>
+          {patientValue !== undefined && (
+            <div className="rounded-xl bg-teal-50 px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-teal-600 mb-0.5">Значение пациента</p>
+              <p className="text-sm font-bold text-teal-900">
+                {getFormValueLabel(factor.formKey!, patientValue)}
+              </p>
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function DiagnosisFactorCard({
+  title,
+  subtitle,
+  factors,
+  maxImportance,
+  diagnosisLabel,
+  form,
+}: {
+  title: string;
+  subtitle: string;
+  factors: RiskFactorEntry[];
+  maxImportance: number;
+  diagnosisLabel: string;
+  form: EarlyDetectionForm;
+}) {
+  return (
+    <Card className="rounded-3xl">
+      <div className="mb-4 flex items-start gap-2">
+        <AlertTriangle className="mt-0.5 shrink-0 text-amber-600" size={18} aria-hidden />
+        <div>
+          <h2 className="font-bold text-slate-900">{title}</h2>
+          <p className="text-xs text-slate-500">{subtitle}</p>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {factors.map((factor) => {
+          const barPct = Math.round((factor.importance / maxImportance) * 100);
+          return (
+            <div key={factor.rawName} className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2">
+              <span className="w-5 shrink-0 text-center text-[11px] font-bold text-slate-400">#{factor.rank}</span>
+              <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-700" title={factor.displayName}>
+                {factor.displayName}
+              </span>
+              <div className="hidden sm:flex h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-slate-200">
+                <div className="h-full rounded-full bg-teal-500" style={{ width: `${barPct}%` }} />
+              </div>
+              <span className="w-8 shrink-0 text-right text-[11px] font-bold text-slate-500">{factor.importance}</span>
+              <FactorPopover
+                factor={factor}
+                maxImportance={maxImportance}
+                diagnosisLabel={diagnosisLabel}
+                totalFactors={factors.length}
+                form={form}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
 }
 
 function Zone({
@@ -952,21 +1091,24 @@ export function EarlyDetection() {
                 </div>
               </Card>
 
-            <div className="grid gap-4 md:grid-cols-3">
-                <Card className="rounded-3xl">
-                  <div className="mb-4 flex items-center gap-2">
-                    <AlertTriangle className="text-amber-600" size={20} aria-hidden />
-                    <h2 className="font-bold text-slate-900">Ключевые факторы риска</h2>
-                  </div>
-                  <div className="space-y-3">
-                    {factorContribs.map((factor, index) => (
-                      <div key={factor.name} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2">
-                        <span className="text-sm font-semibold text-slate-700">{index + 1}. {factor.name}</span>
-                        <span className="text-sm font-bold text-slate-900">+{factor.value.toFixed(1)}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
+            <div className="grid gap-4 md:grid-cols-2">
+                <DiagnosisFactorCard
+                  title="Факторы риска · C34"
+                  subtitle="Рак лёгкого — ключевые предикторы модели"
+                  factors={c34Factors}
+                  maxImportance={C34_MAX_IMPORTANCE}
+                  diagnosisLabel="C34 · Рак лёгкого"
+                  form={resultForm}
+                />
+
+                <DiagnosisFactorCard
+                  title="Факторы риска · C18-C20"
+                  subtitle="Колоректальный рак — ключевые предикторы модели"
+                  factors={c18c20Factors}
+                  maxImportance={C18C20_MAX_IMPORTANCE}
+                  diagnosisLabel="C18-C20 · Колоректальный рак"
+                  form={resultForm}
+                />
 
                 <Card className="rounded-3xl">
                   <div className="mb-4 flex items-center justify-between gap-3">
@@ -988,15 +1130,20 @@ export function EarlyDetection() {
                   <div className="space-y-2 text-sm text-slate-600">
                     <div className="flex items-start gap-2">
                       <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
-                      <span>Отказ от курения: предполагаемое снижение риска 15%.</span>
+                      <span className="flex-1">Отказ от курения: предполагаемое снижение риска 15%.</span>
+                      <DiagnosisTag label="C34" color="blue" />
                     </div>
                     <div className="flex items-start gap-2">
                       <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
-                      <span>Достижение целевого давления: снижение риска 10%.</span>
+                      <span className="flex-1">Достижение целевого давления: снижение риска 10%.</span>
+                      <DiagnosisTag label="C34" color="blue" />
+                      <DiagnosisTag label="C18-C20" color="emerald" />
                     </div>
                     <div className="flex items-start gap-2">
                       <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
-                      <span>Компенсация гипергликемии: снижение риска 12%.</span>
+                      <span className="flex-1">Компенсация гипергликемии: снижение риска 12%.</span>
+                      <DiagnosisTag label="C34" color="blue" />
+                      <DiagnosisTag label="C18-C20" color="emerald" />
                     </div>
                   </div>
                   {simulateEffect !== calculatedSnapshot.simulateEffect && (
@@ -1015,12 +1162,22 @@ export function EarlyDetection() {
                   <h2 className="mb-4 font-bold text-slate-900">Рекомендации по дообследованию</h2>
                   <div className="space-y-3 text-sm text-slate-600">
                     <div className="rounded-2xl bg-red-50 p-3 text-red-800">
-                      Высокий риск C34: КТ ОГК с низкой дозой облучения.
+                      <div className="mb-1 flex items-center gap-2">
+                        <DiagnosisTag label="C34" color="blue" />
+                      </div>
+                      КТ ОГК с низкой дозой облучения при высоком риске рака лёгкого.
                     </div>
                     <div className="rounded-2xl bg-amber-50 p-3 text-amber-800">
+                      <div className="mb-1 flex items-center gap-2">
+                        <DiagnosisTag label="C18-C20" color="emerald" />
+                      </div>
                       Повышенная глюкоза: контроль диабета, РЭА и CA 19-9.
                     </div>
                     <div className="rounded-2xl bg-sky-50 p-3 text-sky-800">
+                      <div className="mb-1 flex items-center gap-2">
+                        <DiagnosisTag label="C34" color="blue" />
+                        <DiagnosisTag label="C18-C20" color="emerald" />
+                      </div>
                       Частые визиты неясной этиологии: расширенный скрининг.
                     </div>
                   </div>

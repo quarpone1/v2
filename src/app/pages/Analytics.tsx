@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { Card } from "../components/Card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
@@ -7,7 +8,7 @@ import {
   earlyDetectionRiskDistributionData,
   earlyDetectionAgeData,
   patientsData,
-  earlyDetectionPatientsData,
+  earlyDetectionPatientsFull,
 } from "../../data/mock";
 import {
   PieChart as RechartsPieChart,
@@ -76,16 +77,16 @@ const ageRiskData = [
   { group: "71–80", средний_риск: 45, fill: "#f59e0b" },
 ];
 
-// ── Derived from earlyDetectionPatientsData (9 records) ────────────────────
+// ── Derived from earlyDetectionPatientsFull (30 records) ───────────────────
 
 const genderDataEarly = [
-  { name: "Мужской", value: earlyDetectionPatientsData.filter((p) => p.gender === "Мужской").length, fill: "#6366f1" },
-  { name: "Женский", value: earlyDetectionPatientsData.filter((p) => p.gender === "Женский").length, fill: "#ec4899" },
+  { name: "Мужской", value: earlyDetectionPatientsFull.filter((p) => p.gender === "Мужской").length, fill: "#6366f1" },
+  { name: "Женский", value: earlyDetectionPatientsFull.filter((p) => p.gender === "Женский").length, fill: "#ec4899" },
 ];
 
 // Horizontal stacked bar: gender × riskLevel
-const genderRiskData = ["Мужской", "Женский"].map((gender) => {
-  const pts = earlyDetectionPatientsData.filter((p) => p.gender === gender);
+const genderRiskData = (["Мужской", "Женский"] as const).map((gender) => {
+  const pts = earlyDetectionPatientsFull.filter((p) => p.gender === gender);
   return {
     gender,
     Низкий: pts.filter((p) => p.riskLevel === "Низкий").length,
@@ -102,7 +103,7 @@ const ageGroups = [
   { label: "71–80", min: 71, max: 80 },
 ];
 const ageRiskEarlyData = ageGroups.map(({ label, min, max }) => {
-  const pts = earlyDetectionPatientsData.filter((p) => p.age >= min && p.age <= max);
+  const pts = earlyDetectionPatientsFull.filter((p) => p.age >= min && p.age <= max);
   return {
     group: label,
     Низкий: pts.filter((p) => p.riskLevel === "Низкий").length,
@@ -113,7 +114,7 @@ const ageRiskEarlyData = ageGroups.map(({ label, min, max }) => {
 
 // ── Completeness tab ────────────────────────────────────────────────────────
 
-const completenessPerPatient = [...earlyDetectionPatientsData]
+const completenessPerPatient = [...earlyDetectionPatientsFull]
   .sort((a, b) => a.completionPercent - b.completionPercent)
   .map((p) => ({
     id: p.id,
@@ -208,13 +209,14 @@ function RiskDashboard({
 // ── Main ───────────────────────────────────────────────────────────────────
 
 export function Analytics() {
+  const navigate = useNavigate();
   const [registry, setRegistry] = useState<RegistryState>({ open: false, riskLevel: null, source: "prognosis" });
 
   const riskKey = registry.riskLevel?.split(" ")[0] ?? "";
   const registryPatients =
     registry.source === "prognosis"
       ? patientsData.filter((p) => p.riskLevel.startsWith(riskKey))
-      : earlyDetectionPatientsData.filter((p) => p.riskLevel.startsWith(riskKey));
+      : earlyDetectionPatientsFull.filter((p) => p.riskLevel.startsWith(riskKey));
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="space-y-6">
@@ -496,8 +498,8 @@ export function Analytics() {
             {/*  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
               <p className="font-bold mb-2">Срезы из cuts.docx, которые не реализованы — в mock-реестре нет нужных полей:</p>
               <ul className="space-y-1 list-disc list-inside text-amber-800">
-                <li><b>Клинико-лабораторные</b> (глюкоза, HGB, частота дыхания, визиты к терапевту) — нет полей в earlyDetectionPatientsData</li>
-                <li><b>Поведенческие</b> (курение, контроль гипертонии/диабета, тревожность) — нет в earlyDetectionPatientsData</li>
+                <li><b>Клинико-лабораторные</b> (глюкоза, HGB, частота дыхания, визиты к терапевту) — нет полей в earlyDetectionPatientsFull</li>
+                <li><b>Поведенческие</b> (курение, контроль гипертонии/диабета, тревожность) — нет в earlyDetectionPatientsFull</li>
                 <li><b>Динамика риска 1→3 года на пациента</b> — нет risk1y/risk2y/risk3y на запись</li>
                 <li><b>Сравнительные</b> (точность модели, ложно+/−) — нет поля actualOutcome</li>
                 <li><b>Регион / тип учреждения</b> — нет поля region/institutionType</li>
@@ -527,17 +529,24 @@ export function Analytics() {
                     <th className="pb-3 pr-4">Возраст</th>
                     <th className="pb-3 pr-4">Пол</th>
                     <th className="pb-3 pr-4">Уровень риска</th>
+                    {registry.source === "early" && <th className="pb-3 pr-4">Диагноз</th>}
                     <th className="pb-3">Дата</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {registryPatients.map((p) => {
                     const isEarly = registry.source === "early";
-                    const date = isEarly
-                      ? (p as (typeof earlyDetectionPatientsData)[0]).lastCalculated
-                      : (p as (typeof patientsData)[0]).lastVisit;
+                    const earlyP = isEarly ? (p as (typeof earlyDetectionPatientsFull)[0]) : null;
+                    const date = isEarly ? earlyP!.lastCalculated : (p as (typeof patientsData)[0]).lastVisit;
+                    const handleRowClick = isEarly
+                      ? () => { setRegistry((s) => ({ ...s, open: false })); navigate(`/patients/early/${p.id}`); }
+                      : undefined;
                     return (
-                      <tr key={p.id} className="hover:bg-slate-50">
+                      <tr
+                        key={p.id}
+                        className={`hover:bg-slate-50 transition-colors ${isEarly ? "cursor-pointer" : ""}`}
+                        onClick={handleRowClick}
+                      >
                         <td className="py-3 pr-4 font-semibold text-slate-800">{p.id}</td>
                         <td className="py-3 pr-4 text-slate-600">{p.age}</td>
                         <td className="py-3 pr-4 text-slate-600">{p.gender}</td>
@@ -550,6 +559,15 @@ export function Analytics() {
                             {p.riskLevel}
                           </span>
                         </td>
+                        {isEarly && (
+                          <td className="py-3 pr-4">
+                            <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              earlyP!.eventualDiagnosis === "C34" ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"
+                            }`}>
+                              {earlyP!.eventualDiagnosis}
+                            </span>
+                          </td>
+                        )}
                         <td className="py-3 text-slate-500">{date}</td>
                       </tr>
                     );

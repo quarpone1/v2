@@ -3,6 +3,7 @@ import { Layout } from "./components/Layout";
 import { Dashboard } from "./pages/Dashboard";
 import { Patients } from "./pages/Patients";
 import { PatientProfile } from "./pages/PatientProfile";
+import { EarlyPatientProfile } from "./pages/EarlyPatientProfile";
 import { Calculator } from "./pages/Calculator";
 import { Analytics } from "./pages/Analytics";
 import { Settings } from "./pages/Settings";
@@ -19,6 +20,7 @@ export const router = createBrowserRouter([
       { index: true, Component: Dashboard },
       { path: "patients", Component: Patients },
       { path: "patients/:id", Component: PatientProfile },
+      { path: "patients/early/:id", Component: EarlyPatientProfile },
       { path: "calculator", Component: Calculator },
       { path: "early-detection", Component: EarlyDetection },
       { path: "batch-analysis", Component: BatchAnalysis },
