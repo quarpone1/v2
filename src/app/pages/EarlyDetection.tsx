@@ -1013,8 +1013,8 @@ export function EarlyDetection() {
                           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                           <XAxis type="number" tickFormatter={(value) => `+${value} п.п.`} />
                           <YAxis type="category" dataKey="name" width={150} />
-                          <Tooltip formatter={(value) => `+${fmt(Number(value))} п.п. к базовому риску`} />
-                          <Bar dataKey="value" radius={[0, 10, 10, 0]}>
+                          <Tooltip formatter={(value) => [`+${fmt(Number(value))} п.п. к базовому риску`, "значение"]} />
+                          <Bar dataKey="value" name="значение" radius={[0, 10, 10, 0]}>
                             {factorContribs.map((entry) => (
                               <Cell key={entry.name} fill={entry.fill} />
                             ))}
@@ -1033,8 +1033,8 @@ export function EarlyDetection() {
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis dataKey="bucket" />
                         <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="count" fill="#38bdf8" radius={[8, 8, 0, 0]} />
+                        <Tooltip formatter={(value) => [value, "количество"]} />
+                        <Bar dataKey="count" name="количество" fill="#38bdf8" radius={[8, 8, 0, 0]} />
                         <ReferenceLine x={risks[1] >= 70 ? "70+" : `${Math.floor(risks[1] / 10) * 10}-${Math.floor(risks[1] / 10) * 10 + 10}`} stroke="#dc2626" strokeWidth={2} label="Пациент" />
                       </BarChart>
                     </ResponsiveContainer>

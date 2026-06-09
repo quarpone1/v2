@@ -2448,9 +2448,13 @@ function HeatmapPlaceholder({
               const col = cellColor(v);
               return (
                 <div key={ci} className="px-3 py-2">
-                  <div className="h-9 w-full rounded-lg flex items-center justify-center text-xs font-bold tabular-nums" style={{ background: col.bg, color: col.fg }}>
+                  <div
+                    className="h-9 w-full rounded-lg flex items-center justify-center text-xs font-bold tabular-nums cursor-default"
+                    style={{ background: col.bg, color: col.fg }}
+                    title="Абсолютное изменение итоговой вероятности (в процентных пунктах) относительно среднего по когорте"
+                  >
                     {v >= 0 ? "+" : ""}
-                    {fmt(v)}
+                    {fmt(v)} п.п.
                   </div>
                 </div>
               );
@@ -2555,10 +2559,10 @@ function BarPlaceholder({ form, outcome, horizon }: { form: FormState; outcome: 
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" barSize={14} barCategoryGap="32%" margin={{ top: 8, right: 12, left: 24, bottom: 0 }}>
             <CartesianGrid strokeDasharray="4 4" stroke="#e2e8f0" />
-            <XAxis type="number" tickFormatter={(v) => `${v}%`} />
+            <XAxis type="number" tickFormatter={(v) => `${v} п.п.`} />
             <YAxis type="category" dataKey="name" width={220} interval={0} tick={<WrappedYAxisTick />} tickMargin={10} />
-            <Tooltip formatter={(v: number) => `${v > 0 ? "+" : ""}${v}%`} />
-            <Bar dataKey="v" radius={[8, 8, 8, 8]}>
+            <Tooltip formatter={(v: number) => [`${v > 0 ? "+" : ""}${fmt(v)} п.п.`, "значение"]} />
+            <Bar dataKey="v" name="значение" radius={[8, 8, 8, 8]}>
               {data.map((entry) => (
                 <Cell
                   key={entry.name}
