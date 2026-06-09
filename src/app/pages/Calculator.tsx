@@ -45,7 +45,7 @@ import {
   PolarRadiusAxis,
   Radar as RadarShape,
 } from "recharts";
-import { cn } from "../../lib/utils";
+import { cn, fmt } from "../../lib/utils";
 
 type Horizon = 1 | 3 | 5;
 type Outcome = "recurrence" | "death";
@@ -528,9 +528,12 @@ function probsFromForm(f: FormState, outcome: Outcome): { y1: number; y3: number
     parseNum(f.age) * 1.1 +
     parseNum(f.cea) * 0.4 +
     parseNum(f.nodesAffected) * 3 +
-    parseNum(f.ast) * 0.05;
+    parseNum(f.ast) * 0.05 +
+    stageToNum(f.stage) * 8 +
+    pNToNum(f.pN) * 6 +
+    pMToNum(f.pM) * 25;
   const oBias = outcome === "death" ? 1.15 : 1.0;
-  const base = 8 + ((seed * oBias) % 44);
+  const base = clamp(seed * oBias * 0.32, 5, 58);
   const y1 = clamp(base * 0.45 + (outcome === "death" ? 2.5 : 0), 2, 95);
   const y3 = clamp(Math.max(y1 + 2, base * 0.85), 3, 96);
   const y5 = clamp(Math.max(y3 + 2, base * 1.05), 4, 97);
@@ -1761,7 +1764,7 @@ export function Calculator() {
                                     ticks={[1, 3, 5]}
                                   />
                                   <YAxis tickFormatter={(v) => `${v}%`} width={40} domain={[0, "auto"]} />
-                                  <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} labelFormatter={(l) => `${l} год`} />
+                                  <Tooltip formatter={(value: number) => `${fmt(value)}%`} labelFormatter={(l) => `${l} год`} />
                                   <Legend />
                                   {cohortBands.map((row, i) => (
                                     <ReferenceArea
@@ -1889,7 +1892,7 @@ export function Calculator() {
                                         isZero ? "text-slate-600" : isPos ? "text-red-700" : "text-emerald-700"
                                       )}
                                     >
-                                      {row.contribution >= 0 ? `+${row.contribution.toFixed(1)}%` : `${row.contribution.toFixed(1)}%`}
+                                      {row.contribution >= 0 ? `+${fmt(row.contribution)}%` : `${fmt(row.contribution)}%`}
                                     </span>
                                   </li>
                                 );
@@ -2101,7 +2104,7 @@ export function Calculator() {
                                     />
                                   </div>
                                   <div className="absolute top-[-18px] text-[10px] font-black text-slate-700" style={{ left: `${riskLeftPct}%`, transform: "translateX(-50%)" }}>
-                                    {patientRiskSelected.toFixed(1)}%
+                                    {fmt(patientRiskSelected)}%
                                   </div>
                                 </div>
                               </div>
@@ -2208,8 +2211,8 @@ export function Calculator() {
 
                               {simActive ? (
                                 <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">
-                                  Пересчитан риск {factorOutcome === "recurrence" ? "рецидива" : "летального исхода"} для горизонта {factorHorizon} год: {patientRiskAfterSimulation.toFixed(1)}% (изменение {simDelta >= 0 ? "+" : ""}
-                                  {simDelta.toFixed(1)} п.п.)
+                                  Пересчитан риск {factorOutcome === "recurrence" ? "рецидива" : "летального исхода"} для горизонта {factorHorizon} год: {fmt(patientRiskAfterSimulation)}% (изменение {simDelta >= 0 ? "+" : ""}
+                                  {fmt(simDelta)} п.п.)
                                   <div className="mt-1 text-xs font-medium">*Моделирование эффекта, не является реальным прогнозом.</div>
                                 </div>
                               ) : null}
@@ -2342,7 +2345,7 @@ function OutcomeBlock({
           return (
             <div key={h} className={cn("rounded-2xl border bg-white p-4 shadow-sm ring-1", c.ring)}>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{horizonLabel(h)}</p>
-              <p className={cn("mt-2 text-3xl font-black tabular-nums", c.text)}>{pct.toFixed(1)}%</p>
+              <p className={cn("mt-2 text-3xl font-black tabular-nums", c.text)}>{fmt(pct)}%</p>
               <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
                 <div className={cn("h-full rounded-full transition-all", c.bar)} style={{ width: `${Math.min(100, pct)}%` }} />
               </div>
@@ -2435,7 +2438,7 @@ function HeatmapPlaceholder({
                 <div key={ci} className="px-3 py-2">
                   <div className="h-9 w-full rounded-lg flex items-center justify-center text-xs font-bold tabular-nums" style={{ background: col.bg, color: col.fg }}>
                     {v >= 0 ? "+" : ""}
-                    {v.toFixed(1)}
+                    {fmt(v)}
                   </div>
                 </div>
               );
@@ -2645,10 +2648,10 @@ function WaterfallPlaceholder({
       </div>
       <div className="mt-2 flex flex-wrap items-center justify-end gap-2 text-xs">
         <span className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-bold text-slate-600">
-          Базис {clampRisk(baselineRisk).toFixed(1)}%
+          Базис {fmt(clampRisk(baselineRisk))}%
         </span>
         <span className="inline-flex items-center rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 font-bold text-indigo-700">
-          Пациент {clampRisk(patientRisk).toFixed(1)}%
+          Пациент {fmt(clampRisk(patientRisk))}%
         </span>
       </div>
 
@@ -2677,7 +2680,7 @@ function WaterfallPlaceholder({
             const stroke = b.kind === "total" ? "rgba(100,116,139,0.35)" : "rgba(15,23,42,0.08)";
             const rx = 10;
             const labelVal = b.kind === "delta" ? (b.to - b.from) : b.to;
-            const valText = b.kind === "delta" ? `${labelVal >= 0 ? "+" : ""}${labelVal.toFixed(1)}%` : `${clampRisk(labelVal).toFixed(1)}%`;
+            const valText = b.kind === "delta" ? `${labelVal >= 0 ? "+" : ""}${fmt(labelVal)}%` : `${fmt(clampRisk(labelVal))}%`;
             const valY = topY - 6;
 
             return (
@@ -2717,7 +2720,7 @@ function WaterfallPlaceholder({
             const x = xCenter(i);
             const maxChars = Math.max(8, Math.floor(barW / 6.4));
             const lines = wrapLabel(label, maxChars);
-            const baseY = i % 2 === 0 ? svgH - 44 : svgH - 22;
+            const baseY = svgH - padBottom + 16;
             return (
               <g key={label + i}>
                 {lines.length ? (
@@ -2800,7 +2803,7 @@ function HistogramPlaceholder({
         </div>
       </div>
       <div className="mt-1 text-xs text-slate-600">
-        Пациент: <span className="font-bold">{patientRisk.toFixed(1)}%</span>, процентиль:{" "}
+        Пациент: <span className="font-bold">{fmt(patientRisk)}%</span>, процентиль:{" "}
         <span className="font-bold">выше {abovePct}% пациентов</span>
       </div>
 
@@ -2828,7 +2831,7 @@ function HistogramPlaceholder({
           {/* patient line */}
           <line x1={lineX} x2={lineX} y1={padTop} y2={lineY} stroke="#ef4444" strokeWidth={2} strokeDasharray="5 4" />
           <text x={lineX} y={padTop + 14} textAnchor="middle" fontSize={12} fill="#ef4444" fontWeight={900}>
-            {patientRisk.toFixed(1)}%
+            {fmt(patientRisk)}%
           </text>
         </svg>
       </div>
@@ -2898,8 +2901,8 @@ function CompareOutcomesPlaceholder({ form, horizon }: { form: FormState; horizo
             Профили близки
           </span>
         )}
-        <span className="text-slate-600 font-semibold">Среднее расхождение: {avgDiff.toFixed(1)}%</span>
-        <span className="text-slate-500">Максимальное расхождение: {maxDiff.metric} ({maxDiff.diff.toFixed(1)}%)</span>
+        <span className="text-slate-600 font-semibold">Среднее расхождение: {fmt(avgDiff)}%</span>
+        <span className="text-slate-500">Максимальное расхождение: {maxDiff.metric} ({fmt(maxDiff.diff)}%)</span>
       </div>
       <div className={cn("mt-3 h-72 w-full rounded-2xl", hasDivergenceAccent ? "ring-2 ring-amber-300/70 bg-amber-50/25" : "")}>
         <ResponsiveContainer width="100%" height="100%">
@@ -2921,7 +2924,7 @@ function CompareOutcomesPlaceholder({ form, horizon }: { form: FormState; horizo
             <div key={row.metric} className="rounded-xl border border-slate-100 bg-white/70 px-3 py-2">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm font-semibold text-slate-700">{row.metric}</span>
-                <span className="text-xs font-bold text-amber-700">{row.diff.toFixed(1)}%</span>
+                <span className="text-xs font-bold text-amber-700">{fmt(row.diff)}%</span>
               </div>
               <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-slate-100">
                 <div className="h-full rounded-full bg-amber-500/80" style={{ width: `${widthPct}%` }} />
@@ -3216,6 +3219,7 @@ function CohortComparisonTable({ form }: { form: FormState }) {
 
       return { key, label, value, median, percentile, deviation, isBetter, patientScore, medianScore };
     })
+    .filter((r) => r.value !== "—")
     .sort((a, b) => (sortAsc ? a.deviation - b.deviation : b.deviation - a.deviation));
 
   return (
@@ -3243,7 +3247,13 @@ function CohortComparisonTable({ form }: { form: FormState }) {
             <div className="font-semibold text-slate-700">{r.label}</div>
             <div className="tabular-nums text-slate-800">{r.value}</div>
             <div className="tabular-nums text-slate-600">{r.median}</div>
-            <div className="text-slate-600">выше {r.percentile}%</div>
+            <div className="text-slate-600">
+              {r.percentile >= 100
+                ? "хуже всех в когорте"
+                : r.percentile <= 0
+                ? "лучше всех в когорте"
+                : `выше ${r.percentile}%`}
+            </div>
             <div className="flex items-center justify-center">
               <span className={cn("text-lg leading-none", r.isBetter ? "text-emerald-600" : "text-red-600")} aria-label={r.isBetter ? "лучше" : "хуже"}>
                 {r.isBetter ? "▲" : "▼"}

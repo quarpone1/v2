@@ -41,7 +41,7 @@ import {
 } from "recharts";
 import { Card } from "../components/Card";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
-import { cn } from "../../lib/utils";
+import { cn, fmt } from "../../lib/utils";
 import {
   c34Factors,
   c18c20Factors,
@@ -266,7 +266,7 @@ function clamp(value: number, min = 0, max = 100) {
 }
 
 function formatPercent(value: number) {
-  return `${value.toFixed(1)}%`;
+  return `${fmt(value)}%`;
 }
 
 function getRiskLevel(risk: number) {
@@ -794,7 +794,7 @@ export function EarlyDetection() {
             </div>
             <div className="rounded-3xl border border-indigo-100 bg-indigo-50/70 p-4">
               <div className="text-xs font-bold uppercase tracking-wide text-indigo-700">ИМТ</div>
-              <div className="mt-1 text-2xl font-bold text-slate-900">{bmi ? bmi.toFixed(1) : "-"}</div>
+              <div className="mt-1 text-2xl font-bold text-slate-900">{bmi ? fmt(bmi) : "-"}</div>
               <div className="text-xs text-slate-500">авторасчет по росту и весу</div>
             </div>
           </div>
@@ -981,7 +981,7 @@ export function EarlyDetection() {
                               className="rounded-2xl px-3 py-3 text-center text-sm font-bold text-white"
                               style={{ backgroundColor: `rgba(15, 118, 110, ${0.25 + value / 22})` }}
                             >
-                              +{value.toFixed(1)}%
+                              +{fmt(value)}%
                             </div>
                           ))}
                         </div>
@@ -1008,7 +1008,7 @@ export function EarlyDetection() {
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis type="number" tickFormatter={(value) => `+${value}%`} />
                         <YAxis type="category" dataKey="name" width={150} />
-                        <Tooltip formatter={(value) => `+${Number(value).toFixed(1)}% к базовому риску`} />
+                        <Tooltip formatter={(value) => `+${fmt(Number(value))}% к базовому риску`} />
                         <Bar dataKey="value" radius={[0, 10, 10, 0]}>
                           {factorContribs.map((entry) => (
                             <Cell key={entry.name} fill={entry.fill} />
@@ -1044,7 +1044,7 @@ export function EarlyDetection() {
                         <div key={factor.name} className="rounded-2xl border border-slate-100 bg-white p-4">
                           <div className="mb-2 flex justify-between text-sm font-bold text-slate-700">
                             <span>{factor.name}</span>
-                            <span>+{factor.value.toFixed(1)}%</span>
+                            <span>+{fmt(factor.value)}%</span>
                           </div>
                           <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                             <div className="h-full rounded-full" style={{ width: `${clamp(factor.value * 4)}%`, backgroundColor: factor.fill }} />
