@@ -44,6 +44,7 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar as RadarShape,
+  Customized,
 } from "recharts";
 import { cn, fmt } from "../../lib/utils";
 
@@ -749,8 +750,8 @@ export function Calculator() {
         medianDeath: Math.max(5, probsDeath.y1 - 2 + (probsDeath.y3 % 5)),
         q1: Math.max(2, probsRec.y1 - 5),
         q3: Math.min(92, probsRec.y1 + 6),
-        whiskerLow: Math.max(0, probsRec.y1 - 18),
-        whiskerHigh: Math.min(95, probsRec.y1 + 20),
+        whiskerLow: Math.max(2, probsRec.y1 - 22),
+        whiskerHigh: Math.min(92, probsRec.y1 + 26),
       },
       {
         x: 3,
@@ -760,8 +761,8 @@ export function Calculator() {
         medianDeath: Math.max(8, probsDeath.y3 - 3 + (probsDeath.y5 % 4)),
         q1: Math.max(3, probsRec.y3 - 7),
         q3: Math.min(94, probsRec.y3 + 8),
-        whiskerLow: Math.max(0, probsRec.y3 - 22),
-        whiskerHigh: Math.min(96, probsRec.y3 + 24),
+        whiskerLow: Math.max(2, probsRec.y3 - 26),
+        whiskerHigh: Math.min(93, probsRec.y3 + 30),
       },
       {
         x: 5,
@@ -771,8 +772,8 @@ export function Calculator() {
         medianDeath: Math.max(10, probsDeath.y5 - 4 + (probsDeath.y1 % 6)),
         q1: Math.max(4, probsRec.y5 - 8),
         q3: Math.min(96, probsRec.y5 + 9),
-        whiskerLow: Math.max(0, probsRec.y5 - 26),
-        whiskerHigh: Math.min(97, probsRec.y5 + 28),
+        whiskerLow: Math.max(2, probsRec.y5 - 30),
+        whiskerHigh: Math.min(94, probsRec.y5 + 34),
       },
     ],
     [probsRec, probsDeath]
@@ -1801,37 +1802,73 @@ export function Calculator() {
                                     domain={[0.6, 5.4]}
                                     ticks={[1, 3, 5]}
                                   />
-                                  <YAxis tickFormatter={(v) => `${v}%`} width={40} domain={[0, "auto"]} />
+                                  <YAxis tickFormatter={(v) => `${v}%`} width={40} domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} />
                                   <Tooltip formatter={(value: number) => `${fmt(value)}%`} labelFormatter={(l) => `${l} год`} />
                                   <Legend />
-                                  {showBoxPlot && cohortBands.map((row, i) => (
-                                    <ReferenceArea
-                                      key={`w${i}`}
-                                      x1={row.x - 0.42}
-                                      x2={row.x + 0.42}
-                                      y1={row.whiskerLow}
-                                      y2={row.whiskerHigh}
-                                      fill="#94a3b8"
-                                      fillOpacity={0.09}
-                                      stroke="#94a3b8"
-                                      strokeOpacity={0.25}
-                                      strokeDasharray="3 3"
-                                      ifOverflow="visible"
+                                  {showBoxPlot ? (
+                                    <Customized
+                                      component={({ xAxisMap, yAxisMap }: any) => {
+                                        const xScale = xAxisMap?.[0]?.scale;
+                                        const yScale = yAxisMap?.[0]?.scale;
+                                        if (!xScale || !yScale) return null;
+                                        return (
+                                          <g>
+                                            {cohortBands.map((row, i) => {
+                                              const cx = xScale(row.x);
+                                              const yLow  = yScale(row.whiskerLow);
+                                              const yQ1   = yScale(row.q1);
+                                              const yQ3   = yScale(row.q3);
+                                              const yHigh = yScale(row.whiskerHigh);
+                                              const rangeW = 52;
+                                              const boxW   = 36;
+                                              const capW   = 28;
+                                              return (
+                                                <g key={i}>
+                                                  {/* диапазон P5–P95: широкий прямоугольник */}
+                                                  <rect
+                                                    x={cx - rangeW / 2} y={yHigh}
+                                                    width={rangeW} height={yLow - yHigh}
+                                                    fill="#6366f1" fillOpacity={0.10}
+                                                    stroke="#6366f1" strokeOpacity={0.35}
+                                                    strokeWidth={1} strokeDasharray="4 3"
+                                                    rx={4}
+                                                  />
+                                                  {/* коробка Q1–Q3 */}
+                                                  <rect
+                                                    x={cx - boxW / 2} y={yQ3}
+                                                    width={boxW} height={yQ1 - yQ3}
+                                                    fill="#6366f1" fillOpacity={0.30}
+                                                    stroke="#6366f1" strokeWidth={2.5}
+                                                    rx={3}
+                                                  />
+                                                  {/* усы */}
+                                                  <line x1={cx} x2={cx} y1={yQ1} y2={yLow}  stroke="#6366f1" strokeWidth={2.5} />
+                                                  <line x1={cx} x2={cx} y1={yQ3} y2={yHigh} stroke="#6366f1" strokeWidth={2.5} />
+                                                  {/* шапки усов */}
+                                                  <line x1={cx - capW/2} x2={cx + capW/2} y1={yLow}  y2={yLow}  stroke="#6366f1" strokeWidth={3} />
+                                                  <line x1={cx - capW/2} x2={cx + capW/2} y1={yHigh} y2={yHigh} stroke="#6366f1" strokeWidth={3} />
+                                                </g>
+                                              );
+                                            })}
+                                          </g>
+                                        );
+                                      }}
                                     />
-                                  ))}
-                                  {cohortBands.map((row, i) => (
-                                    <ReferenceArea
-                                      key={i}
-                                      x1={row.x - 0.35}
-                                      x2={row.x + 0.35}
-                                      y1={row.q1}
-                                      y2={row.q3}
-                                      fill="#94a3b8"
-                                      fillOpacity={0.22}
-                                      strokeOpacity={0}
-                                      ifOverflow="visible"
-                                    />
-                                  ))}
+                                  ) : (
+                                    cohortBands.map((row, i) => (
+                                      <ReferenceArea
+                                        key={i}
+                                        x1={row.x - 0.35}
+                                        x2={row.x + 0.35}
+                                        y1={row.q1}
+                                        y2={row.q3}
+                                        fill="#94a3b8"
+                                        fillOpacity={0.22}
+                                        strokeOpacity={0}
+                                        ifOverflow="visible"
+                                      />
+                                    ))
+                                  )}
                                   <Line
                                     type="monotone"
                                     dataKey="medianRec"
