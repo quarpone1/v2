@@ -158,8 +158,13 @@ export function Layout() {
           <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
             <Stethoscope size={22} aria-hidden />
           </div>
-          <div className="font-semibold text-xl tracking-tight text-slate-900">
-            Онко <span className="text-indigo-600">Ассистент</span>
+          <div>
+            <div className="font-semibold text-xl tracking-tight text-slate-900">
+              Онко <span className="text-indigo-600">Ассистент</span>
+            </div>
+            <span className="inline-block text-xs bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-medium leading-tight">
+              Демо-прототип
+            </span>
           </div>
         </div>
 

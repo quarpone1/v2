@@ -980,12 +980,16 @@ export function EarlyDetection() {
                               key={`${row.name}-${index}`}
                               className="rounded-2xl px-3 py-3 text-center text-sm font-bold text-white"
                               style={{ backgroundColor: `rgba(15, 118, 110, ${0.25 + value / 22})` }}
+                              title="Абсолютное изменение итоговой вероятности в процентных пунктах"
                             >
-                              +{fmt(value)}%
+                              +{fmt(value)} п.п.
                             </div>
                           ))}
                         </div>
                       ))}
+                      <p className="mt-1 text-xs text-slate-400">
+                        п.п. — процентные пункты изменения абсолютного риска относительно среднего по когорте
+                      </p>
                     </div>
                   )}
 
@@ -1003,19 +1007,24 @@ export function EarlyDetection() {
                   )}
 
                   {activeTab === "factors" && (
-                    <ResponsiveContainer width="100%" height={330}>
-                      <BarChart data={factorContribs} layout="vertical" margin={{ left: 24 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                        <XAxis type="number" tickFormatter={(value) => `+${value}%`} />
-                        <YAxis type="category" dataKey="name" width={150} />
-                        <Tooltip formatter={(value) => `+${fmt(Number(value))}% к базовому риску`} />
-                        <Bar dataKey="value" radius={[0, 10, 10, 0]}>
-                          {factorContribs.map((entry) => (
-                            <Cell key={entry.name} fill={entry.fill} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <div>
+                      <ResponsiveContainer width="100%" height={330}>
+                        <BarChart data={factorContribs} layout="vertical" margin={{ left: 24 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis type="number" tickFormatter={(value) => `+${value} п.п.`} />
+                          <YAxis type="category" dataKey="name" width={150} />
+                          <Tooltip formatter={(value) => `+${fmt(Number(value))} п.п. к базовому риску`} />
+                          <Bar dataKey="value" radius={[0, 10, 10, 0]}>
+                            {factorContribs.map((entry) => (
+                              <Cell key={entry.name} fill={entry.fill} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                      <p className="mt-1 text-xs text-slate-400 text-center">
+                        п.п. — процентные пункты изменения абсолютного риска относительно среднего по когорте
+                      </p>
+                    </div>
                   )}
 
                   {activeTab === "cohort" && (
@@ -1044,7 +1053,7 @@ export function EarlyDetection() {
                         <div key={factor.name} className="rounded-2xl border border-slate-100 bg-white p-4">
                           <div className="mb-2 flex justify-between text-sm font-bold text-slate-700">
                             <span>{factor.name}</span>
-                            <span>+{fmt(factor.value)}%</span>
+                            <span title="Абсолютное изменение итоговой вероятности в процентных пунктах">+{fmt(factor.value)} п.п.</span>
                           </div>
                           <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                             <div className="h-full rounded-full" style={{ width: `${clamp(factor.value * 4)}%`, backgroundColor: factor.fill }} />

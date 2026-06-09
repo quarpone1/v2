@@ -747,8 +747,8 @@ export function Calculator() {
         patientDeath: probsDeath.y1,
         medianRec: Math.max(5, probsRec.y1 - 2 + (probsRec.y3 % 5)),
         medianDeath: Math.max(5, probsDeath.y1 - 2 + (probsDeath.y3 % 5)),
-        q1: Math.max(2, probsRec.y1 - 8),
-        q3: Math.min(92, probsRec.y1 + 10),
+        q1: Math.max(2, probsRec.y1 - 5),
+        q3: Math.min(92, probsRec.y1 + 6),
       },
       {
         x: 3,
@@ -756,8 +756,8 @@ export function Calculator() {
         patientDeath: probsDeath.y3,
         medianRec: Math.max(8, probsRec.y3 - 3 + (probsRec.y5 % 4)),
         medianDeath: Math.max(8, probsDeath.y3 - 3 + (probsDeath.y5 % 4)),
-        q1: Math.max(3, probsRec.y3 - 12),
-        q3: Math.min(94, probsRec.y3 + 12),
+        q1: Math.max(3, probsRec.y3 - 7),
+        q3: Math.min(94, probsRec.y3 + 8),
       },
       {
         x: 5,
@@ -765,8 +765,8 @@ export function Calculator() {
         patientDeath: probsDeath.y5,
         medianRec: Math.max(10, probsRec.y5 - 4 + (probsRec.y1 % 6)),
         medianDeath: Math.max(10, probsDeath.y5 - 4 + (probsDeath.y1 % 6)),
-        q1: Math.max(4, probsRec.y5 - 14),
-        q3: Math.min(96, probsRec.y5 + 14),
+        q1: Math.max(4, probsRec.y5 - 8),
+        q3: Math.min(96, probsRec.y5 + 9),
       },
     ],
     [probsRec, probsDeath]
@@ -976,6 +976,18 @@ export function Calculator() {
         transition={{ duration: 0.35 }}
         className="mx-auto flex w-full max-w-[96rem] flex-col gap-4"
       >
+        <details className="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-2.5 text-sm backdrop-blur-sm">
+          <summary className="cursor-pointer select-none font-semibold text-amber-800">
+            Важное предупреждение — нажмите для просмотра
+          </summary>
+          <p className="mt-2 leading-relaxed text-amber-700">
+            Текущая версия платформы — демонстрационный прототип. Она иллюстрирует логику работы алгоритма,
+            но не является медицинским изделием и не предназначена для принятия клинических решений.
+            Все числовые значения, процентили, графики и вероятности следует рассматривать как техническую
+            демонстрацию, а не как валидированные медицинские заключения.
+          </p>
+        </details>
+
         {/* Верхняя зона ~15% (сворачиваемая) */}
         <section
           className="flex w-full flex-shrink-0 flex-col rounded-[28px] border border-white/70 bg-white/55 shadow-sm backdrop-blur-md"
@@ -1751,7 +1763,7 @@ export function Calculator() {
                               <div className="text-sm font-bold text-slate-800">Пациент / когорта НМИЦ</div>
                               <div className="text-xs text-slate-500">Горизонты: 1 / 3 / 5 лет · когорта по стадии: {cohortCountByStage(form.stage)} пациентов</div>
                             </div>
-                            <div className="mt-1 text-xs text-slate-500">Подпись когорты НМИЦ: Медиана когорты НМИЦ (N=2909), с адаптацией N по стадии текущего пациента.</div>
+                            <div className="mt-1 text-xs text-slate-500">Медиана когорты НМИЦ (N=2909), с адаптацией N по стадии текущего пациента. Серая полоса — 95% доверительный интервал медианы.</div>
                             <div className="mt-3 h-64 w-full min-w-0">
                               <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={cohortBands} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
@@ -2680,13 +2692,16 @@ function WaterfallPlaceholder({
             const stroke = b.kind === "total" ? "rgba(100,116,139,0.35)" : "rgba(15,23,42,0.08)";
             const rx = 10;
             const labelVal = b.kind === "delta" ? (b.to - b.from) : b.to;
-            const valText = b.kind === "delta" ? `${labelVal >= 0 ? "+" : ""}${fmt(labelVal)}%` : `${fmt(clampRisk(labelVal))}%`;
+            const valText = b.kind === "delta" ? `${labelVal >= 0 ? "+" : ""}${fmt(labelVal)} п.п.` : `${fmt(clampRisk(labelVal))}%`;
             const valY = topY - 6;
 
             return (
               <g key={`${b.label}-${i}`}>
                 <rect x={x} y={topY} width={barW} height={h} rx={rx} fill={b.color} stroke={stroke} />
                 <text x={x + barW / 2} y={valY} textAnchor="middle" fontSize={10} fill="#0f172a" fontWeight={900}>
+                  {b.kind === "delta" && (
+                    <title>Абсолютное изменение итоговой вероятности в процентных пунктах</title>
+                  )}
                   {valText}
                 </text>
               </g>
@@ -2738,6 +2753,9 @@ function WaterfallPlaceholder({
 
         </svg>
       </div>
+      <p className="mt-2 text-xs text-slate-400 text-center">
+        п.п. — процентные пункты изменения абсолютного риска относительно базового уровня пациента
+      </p>
     </div>
   );
 }
@@ -3070,29 +3088,29 @@ function WrappedYAxisTick(props: { x?: number; y?: number; payload?: { value?: s
 function CohortComparisonTable({ form }: { form: FormState }) {
   const [sortAsc, setSortAsc] = useState(false);
 
-  const coreKeys: Array<{ key: keyof FormState; label: string }> = [
-    { key: "sex", label: "Пол" },
+  const coreKeys: Array<{ key: keyof FormState; label: string; categorical?: boolean; tooRare?: boolean }> = [
+    { key: "sex", label: "Пол", categorical: true },
     { key: "age", label: "Возраст" },
     { key: "heightCm", label: "Рост, см" },
     { key: "weightKg", label: "Вес, кг" },
-    { key: "stage", label: "Стадия" },
-    { key: "pT", label: "pT" },
-    { key: "pN", label: "pN" },
-    { key: "pM", label: "pM" },
-    { key: "gradeG", label: "G" },
-    { key: "lymphovascularInvasion", label: "ЛВИ" },
-    { key: "perineuralInvasion", label: "ПНИ" },
+    { key: "stage", label: "Стадия", categorical: true },
+    { key: "pT", label: "pT", categorical: true },
+    { key: "pN", label: "pN", categorical: true },
+    { key: "pM", label: "pM", categorical: true },
+    { key: "gradeG", label: "G", categorical: true },
+    { key: "lymphovascularInvasion", label: "ЛВИ", categorical: true },
+    { key: "perineuralInvasion", label: "ПНИ", categorical: true },
     { key: "nodesExamined", label: "ЛУ изучено" },
     { key: "nodesAffected", label: "ЛУ поражено" },
-    { key: "nras", label: "NRAS" },
-    { key: "braf", label: "BRAF" },
-    { key: "kras", label: "KRAS" },
-    { key: "operation", label: "Операция" },
-    { key: "surgicalAccess", label: "Доступ" },
-    { key: "adjuvantTherapy", label: "Наличие адъювантной терапии" },
-    { key: "adjuvantScheme", label: "Схема" },
+    { key: "nras", label: "NRAS", categorical: true, tooRare: true },
+    { key: "braf", label: "BRAF", categorical: true, tooRare: true },
+    { key: "kras", label: "KRAS", categorical: true },
+    { key: "operation", label: "Операция", categorical: true },
+    { key: "surgicalAccess", label: "Доступ", categorical: true },
+    { key: "adjuvantTherapy", label: "Наличие адъювантной терапии", categorical: true },
+    { key: "adjuvantScheme", label: "Схема", categorical: true },
     { key: "adjuvantCourses", label: "Курсы" },
-    { key: "radiotherapy", label: "Лучевая терапия" },
+    { key: "radiotherapy", label: "Лучевая терапия", categorical: true },
     { key: "cea", label: "РЭА" },
     { key: "lymphocytesAbs", label: "Лимфоциты (абс.)" },
     { key: "leukocytes", label: "Лейкоциты" },
@@ -3199,7 +3217,7 @@ function CohortComparisonTable({ form }: { form: FormState }) {
   };
 
   const computedRows = coreKeys
-    .map(({ key, label }) => {
+    .map(({ key, label, categorical, tooRare }) => {
       const patientRaw = String(form[key] ?? "");
       const medianRaw = String(COHORT_REFERENCE_FORM[key] ?? "");
       const patientScore = scoreFor(key, patientRaw);
@@ -3217,7 +3235,7 @@ function CohortComparisonTable({ form }: { form: FormState }) {
       const value = patientRaw || "—";
       const median = medianRaw || "—";
 
-      return { key, label, value, median, percentile, deviation, isBetter, patientScore, medianScore };
+      return { key, label, value, median, percentile, deviation, isBetter, patientScore, medianScore, categorical: !!categorical, tooRare: !!tooRare };
     })
     .filter((r) => r.value !== "—")
     .sort((a, b) => (sortAsc ? a.deviation - b.deviation : b.deviation - a.deviation));
@@ -3239,7 +3257,7 @@ function CohortComparisonTable({ form }: { form: FormState }) {
           <div>Параметр</div>
           <div>Пациент</div>
           <div>Медиана</div>
-          <div>Процентиль</div>
+          <div>Позиция в когорте</div>
           <div />
         </div>
         {computedRows.map((r) => (
@@ -3248,7 +3266,11 @@ function CohortComparisonTable({ form }: { form: FormState }) {
             <div className="tabular-nums text-slate-800">{r.value}</div>
             <div className="tabular-nums text-slate-600">{r.median}</div>
             <div className="text-slate-600">
-              {r.percentile >= 100
+              {r.tooRare
+                ? <span className="text-amber-600 text-xs">Недостаточно данных</span>
+                : r.categorical
+                ? <span className="text-slate-400">—</span>
+                : r.percentile >= 100
                 ? "хуже всех в когорте"
                 : r.percentile <= 0
                 ? "лучше всех в когорте"
