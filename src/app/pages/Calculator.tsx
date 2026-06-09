@@ -749,6 +749,8 @@ export function Calculator() {
         medianDeath: Math.max(5, probsDeath.y1 - 2 + (probsDeath.y3 % 5)),
         q1: Math.max(2, probsRec.y1 - 5),
         q3: Math.min(92, probsRec.y1 + 6),
+        whiskerLow: Math.max(0, probsRec.y1 - 18),
+        whiskerHigh: Math.min(95, probsRec.y1 + 20),
       },
       {
         x: 3,
@@ -758,6 +760,8 @@ export function Calculator() {
         medianDeath: Math.max(8, probsDeath.y3 - 3 + (probsDeath.y5 % 4)),
         q1: Math.max(3, probsRec.y3 - 7),
         q3: Math.min(94, probsRec.y3 + 8),
+        whiskerLow: Math.max(0, probsRec.y3 - 22),
+        whiskerHigh: Math.min(96, probsRec.y3 + 24),
       },
       {
         x: 5,
@@ -767,6 +771,8 @@ export function Calculator() {
         medianDeath: Math.max(10, probsDeath.y5 - 4 + (probsDeath.y1 % 6)),
         q1: Math.max(4, probsRec.y5 - 8),
         q3: Math.min(96, probsRec.y5 + 9),
+        whiskerLow: Math.max(0, probsRec.y5 - 26),
+        whiskerHigh: Math.min(97, probsRec.y5 + 28),
       },
     ],
     [probsRec, probsDeath]
@@ -967,6 +973,7 @@ export function Calculator() {
   const [activeTab, setActiveTab] = useState<
     "line" | "heat" | "radar" | "bar" | "cohort" | "waterfall" | "hist" | "compare" | "parallel"
   >("line");
+  const [showBoxPlot, setShowBoxPlot] = useState(false);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 px-0 py-3 sm:px-1">
@@ -1761,9 +1768,28 @@ export function Calculator() {
                           <>
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="text-sm font-bold text-slate-800">Пациент / когорта НМИЦ</div>
-                              <div className="text-xs text-slate-500">Горизонты: 1 / 3 / 5 лет · когорта по стадии: {cohortCountByStage(form.stage)} пациентов</div>
+                              <div className="flex items-center gap-2">
+                                <div className="text-xs text-slate-500">Горизонты: 1 / 3 / 5 лет · когорта по стадии: {cohortCountByStage(form.stage)} пациентов</div>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowBoxPlot((v) => !v)}
+                                  className={cn(
+                                    "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors",
+                                    showBoxPlot
+                                      ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                                      : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                                  )}
+                                >
+                                  Box-Plot
+                                </button>
+                              </div>
                             </div>
-                            <div className="mt-1 text-xs text-slate-500">Медиана когорты НМИЦ (N=2909), с адаптацией N по стадии текущего пациента. Серая полоса — 95% доверительный интервал медианы.</div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              Медиана когорты НМИЦ (N=2909), с адаптацией N по стадии текущего пациента.
+                              {showBoxPlot
+                                ? " Тёмная полоса — 95% ДИ медианы, светлая — полный разброс (P5–P95)."
+                                : " Серая полоса — 95% доверительный интервал медианы."}
+                            </div>
                             <div className="mt-3 h-64 w-full min-w-0">
                               <ResponsiveContainer width="100%" height="100%">
                                 <ComposedChart data={cohortBands} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
@@ -1778,6 +1804,21 @@ export function Calculator() {
                                   <YAxis tickFormatter={(v) => `${v}%`} width={40} domain={[0, "auto"]} />
                                   <Tooltip formatter={(value: number) => `${fmt(value)}%`} labelFormatter={(l) => `${l} год`} />
                                   <Legend />
+                                  {showBoxPlot && cohortBands.map((row, i) => (
+                                    <ReferenceArea
+                                      key={`w${i}`}
+                                      x1={row.x - 0.42}
+                                      x2={row.x + 0.42}
+                                      y1={row.whiskerLow}
+                                      y2={row.whiskerHigh}
+                                      fill="#94a3b8"
+                                      fillOpacity={0.09}
+                                      stroke="#94a3b8"
+                                      strokeOpacity={0.25}
+                                      strokeDasharray="3 3"
+                                      ifOverflow="visible"
+                                    />
+                                  ))}
                                   {cohortBands.map((row, i) => (
                                     <ReferenceArea
                                       key={i}
@@ -2357,9 +2398,18 @@ function OutcomeBlock({
           return (
             <div key={h} className={cn("rounded-2xl border bg-white p-4 shadow-sm ring-1", c.ring)}>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{horizonLabel(h)}</p>
-              <p className={cn("mt-2 text-3xl font-black tabular-nums", c.text)}>{fmt(pct)}%</p>
-              <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-                <div className={cn("h-full rounded-full transition-all", c.bar)} style={{ width: `${Math.min(100, pct)}%` }} />
+              <p
+                className="mt-2 text-3xl font-black tabular-nums text-slate-400"
+                title="Демо-прогноз: значения не прошли клиническую калибровку и носят ориентировочный характер"
+              >
+                {fmt(pct)}%
+              </p>
+              <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-600">
+                <span aria-hidden>⚠</span>
+                <span>Не откалибровано</span>
+              </div>
+              <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+                <div className={cn("h-full rounded-full transition-all opacity-50", c.bar)} style={{ width: `${Math.min(100, pct)}%` }} />
               </div>
               <p className="mt-2 text-sm font-medium text-slate-700">{cat.label}</p>
             </div>
