@@ -740,44 +740,53 @@ export function Calculator() {
       extraClass ?? null
     );
 
-  const cohortBands = useMemo(
-    () => [
-      {
-        x: 1,
-        patientRec: probsRec.y1,
-        patientDeath: probsDeath.y1,
-        medianRec: Math.max(5, probsRec.y1 - 2 + (probsRec.y3 % 5)),
-        medianDeath: Math.max(5, probsDeath.y1 - 2 + (probsDeath.y3 % 5)),
-        q1: Math.max(2, probsRec.y1 - 5),
-        q3: Math.min(92, probsRec.y1 + 6),
-        whiskerLow: Math.max(2, probsRec.y1 - 22),
-        whiskerHigh: Math.min(92, probsRec.y1 + 26),
-      },
-      {
-        x: 3,
-        patientRec: probsRec.y3,
-        patientDeath: probsDeath.y3,
-        medianRec: Math.max(8, probsRec.y3 - 3 + (probsRec.y5 % 4)),
-        medianDeath: Math.max(8, probsDeath.y3 - 3 + (probsDeath.y5 % 4)),
-        q1: Math.max(3, probsRec.y3 - 7),
-        q3: Math.min(94, probsRec.y3 + 8),
-        whiskerLow: Math.max(2, probsRec.y3 - 26),
-        whiskerHigh: Math.min(93, probsRec.y3 + 30),
-      },
-      {
-        x: 5,
-        patientRec: probsRec.y5,
-        patientDeath: probsDeath.y5,
-        medianRec: Math.max(10, probsRec.y5 - 4 + (probsRec.y1 % 6)),
-        medianDeath: Math.max(10, probsDeath.y5 - 4 + (probsDeath.y1 % 6)),
-        q1: Math.max(4, probsRec.y5 - 8),
-        q3: Math.min(96, probsRec.y5 + 9),
-        whiskerLow: Math.max(2, probsRec.y5 - 30),
-        whiskerHigh: Math.min(94, probsRec.y5 + 34),
-      },
-    ],
-    [probsRec, probsDeath]
-  );
+  const cohortBands = useMemo(() => {
+    const mk = (
+      x: number,
+      patientRec: number,
+      patientDeath: number,
+      medianRec: number,
+      medianDeath: number,
+      ci: number
+    ) => ({
+      x,
+      patientRec,
+      patientDeath,
+      medianRec,
+      medianDeath,
+      // 95% ДИ медианы когорты (для усов error-bar)
+      ciRecLow: clamp(medianRec - ci, 0, 100),
+      ciRecHigh: clamp(medianRec + ci, 0, 100),
+      ciDeathLow: clamp(medianDeath - ci, 0, 100),
+      ciDeathHigh: clamp(medianDeath + ci, 0, 100),
+    });
+    return [
+      mk(
+        1,
+        probsRec.y1,
+        probsDeath.y1,
+        Math.max(5, probsRec.y1 - 2 + (probsRec.y3 % 5)),
+        Math.max(5, probsDeath.y1 - 2 + (probsDeath.y3 % 5)),
+        7
+      ),
+      mk(
+        3,
+        probsRec.y3,
+        probsDeath.y3,
+        Math.max(8, probsRec.y3 - 3 + (probsRec.y5 % 4)),
+        Math.max(8, probsDeath.y3 - 3 + (probsDeath.y5 % 4)),
+        9
+      ),
+      mk(
+        5,
+        probsRec.y5,
+        probsDeath.y5,
+        Math.max(10, probsRec.y5 - 4 + (probsRec.y1 % 6)),
+        Math.max(10, probsDeath.y5 - 4 + (probsDeath.y1 % 6)),
+        11
+      ),
+    ];
+  }, [probsRec, probsDeath]);
 
   const setField = useCallback(
     <K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -1781,14 +1790,14 @@ export function Calculator() {
                                       : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
                                   )}
                                 >
-                                  Box-Plot
+                                  Точки + ДИ
                                 </button>
                               </div>
                             </div>
                             <div className="mt-1 text-xs text-slate-500">
                               Медиана когорты НМИЦ (N=2909), с адаптацией N по стадии текущего пациента.
                               {showBoxPlot
-                                ? " Тёмная полоса — 95% ДИ медианы, светлая — полный разброс (P5–P95)."
+                                ? " ● — прогноз пациента, ◆ — медиана когорты, усы — 95% ДИ медианы, линия соединяет горизонты."
                                 : " Серая полоса — 95% доверительный интервал медианы."}
                             </div>
                             <div className="mt-3 h-64 w-full min-w-0">
@@ -1811,42 +1820,44 @@ export function Calculator() {
                                         const xScale = xAxisMap?.[0]?.scale;
                                         const yScale = yAxisMap?.[0]?.scale;
                                         if (!xScale || !yScale) return null;
+                                        const capW = 16;
+                                        // один error-bar: ус 95% ДИ медианы + засечки + ромб медианы + крупная точка пациента
+                                        const series = (
+                                          cx: number,
+                                          dodge: number,
+                                          ciLow: number,
+                                          ciHigh: number,
+                                          med: number,
+                                          patient: number,
+                                          color: string
+                                        ) => {
+                                          const wx = cx + dodge;
+                                          return (
+                                            <g>
+                                              {/* ус: вертикальная линия 95% ДИ */}
+                                              <line x1={wx} x2={wx} y1={ciLow} y2={ciHigh} stroke={color} strokeWidth={2.5} />
+                                              {/* засечки на концах */}
+                                              <line x1={wx - capW / 2} x2={wx + capW / 2} y1={ciLow} y2={ciLow} stroke={color} strokeWidth={2.5} />
+                                              <line x1={wx - capW / 2} x2={wx + capW / 2} y1={ciHigh} y2={ciHigh} stroke={color} strokeWidth={2.5} />
+                                              {/* ромб — медиана когорты */}
+                                              <rect
+                                                x={cx - 5} y={med - 5} width={10} height={10}
+                                                fill="#fff" stroke={color} strokeWidth={2}
+                                                transform={`rotate(45 ${cx} ${med})`}
+                                              />
+                                              {/* крупная точка — прогноз пациента */}
+                                              <circle cx={cx} cy={patient} r={6.5} fill={color} stroke="#fff" strokeWidth={2} />
+                                            </g>
+                                          );
+                                        };
                                         return (
                                           <g>
                                             {cohortBands.map((row, i) => {
                                               const cx = xScale(row.x);
-                                              const yLow  = yScale(row.whiskerLow);
-                                              const yQ1   = yScale(row.q1);
-                                              const yQ3   = yScale(row.q3);
-                                              const yHigh = yScale(row.whiskerHigh);
-                                              const rangeW = 52;
-                                              const boxW   = 36;
-                                              const capW   = 28;
                                               return (
                                                 <g key={i}>
-                                                  {/* диапазон P5–P95: широкий прямоугольник */}
-                                                  <rect
-                                                    x={cx - rangeW / 2} y={yHigh}
-                                                    width={rangeW} height={yLow - yHigh}
-                                                    fill="#6366f1" fillOpacity={0.10}
-                                                    stroke="#6366f1" strokeOpacity={0.35}
-                                                    strokeWidth={1} strokeDasharray="4 3"
-                                                    rx={4}
-                                                  />
-                                                  {/* коробка Q1–Q3 */}
-                                                  <rect
-                                                    x={cx - boxW / 2} y={yQ3}
-                                                    width={boxW} height={yQ1 - yQ3}
-                                                    fill="#6366f1" fillOpacity={0.30}
-                                                    stroke="#6366f1" strokeWidth={2.5}
-                                                    rx={3}
-                                                  />
-                                                  {/* усы */}
-                                                  <line x1={cx} x2={cx} y1={yQ1} y2={yLow}  stroke="#6366f1" strokeWidth={2.5} />
-                                                  <line x1={cx} x2={cx} y1={yQ3} y2={yHigh} stroke="#6366f1" strokeWidth={2.5} />
-                                                  {/* шапки усов */}
-                                                  <line x1={cx - capW/2} x2={cx + capW/2} y1={yLow}  y2={yLow}  stroke="#6366f1" strokeWidth={3} />
-                                                  <line x1={cx - capW/2} x2={cx + capW/2} y1={yHigh} y2={yHigh} stroke="#6366f1" strokeWidth={3} />
+                                                  {series(cx, -6, yScale(row.ciRecLow), yScale(row.ciRecHigh), yScale(row.medianRec), yScale(row.patientRec), "#2563eb")}
+                                                  {series(cx, 6, yScale(row.ciDeathLow), yScale(row.ciDeathHigh), yScale(row.medianDeath), yScale(row.patientDeath), "#dc2626")}
                                                 </g>
                                               );
                                             })}
@@ -1860,8 +1871,8 @@ export function Calculator() {
                                         key={i}
                                         x1={row.x - 0.35}
                                         x2={row.x + 0.35}
-                                        y1={row.q1}
-                                        y2={row.q3}
+                                        y1={row.ciRecLow}
+                                        y2={row.ciRecHigh}
                                         fill="#94a3b8"
                                         fillOpacity={0.22}
                                         strokeOpacity={0}
@@ -1876,7 +1887,7 @@ export function Calculator() {
                                     stroke="#2563eb"
                                     strokeWidth={2}
                                     strokeDasharray="6 4"
-                                    dot={{ r: 3 }}
+                                    dot={showBoxPlot ? false : { r: 3 }}
                                   />
                                   <Line
                                     type="monotone"
@@ -1885,16 +1896,16 @@ export function Calculator() {
                                     stroke="#dc2626"
                                     strokeWidth={2}
                                     strokeDasharray="6 4"
-                                    dot={{ r: 3 }}
+                                    dot={showBoxPlot ? false : { r: 3 }}
                                   />
-                                  <Line type="monotone" dataKey="patientRec" name="Пациент (рецидив)" stroke="#2563eb" strokeWidth={2.5} dot={{ r: 4, fill: "#2563eb" }} />
+                                  <Line type="monotone" dataKey="patientRec" name="Пациент (рецидив)" stroke="#2563eb" strokeWidth={2.5} dot={showBoxPlot ? false : { r: 4, fill: "#2563eb" }} />
                                   <Line
                                     type="monotone"
                                     dataKey="patientDeath"
                                     name="Пациент (летальный исход)"
                                     stroke="#dc2626"
                                     strokeWidth={2.5}
-                                    dot={{ r: 4, fill: "#dc2626" }}
+                                    dot={showBoxPlot ? false : { r: 4, fill: "#dc2626" }}
                                   />
                                 </ComposedChart>
                               </ResponsiveContainer>
